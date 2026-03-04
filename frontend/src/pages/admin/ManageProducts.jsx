@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"; // Added useState
 import { useDispatch, useSelector } from "react-redux";
-import { fetchProducts, deleteProduct } from "../../features/products/productSlice";
+import { fetchProducts, deleteProduct } from "../../features/products/ProductSlice";
 import { Link } from "react-router-dom";
 import axios from "axios";
 import AdminSidebar from "../../components/admin/AdminSidebar";
