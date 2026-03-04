@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useParams, useNavigate } from "react-router-dom";
-import { updateProduct, fetchProducts } from "../../features/products/productSlice";
+import { updateProduct, fetchProducts } from "../../features/products/ProductSlice";
 import AdminSidebar from "../../components/admin/AdminSidebar";
 
 const EditProduct = () => {
@@ -237,4 +237,4 @@ const EditProduct = () => {
   );
 };
 
-export default EditProduct;
+export default EditProduct; 
