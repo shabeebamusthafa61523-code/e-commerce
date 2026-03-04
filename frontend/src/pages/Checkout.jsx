@@ -67,7 +67,7 @@ export default function Checkout() {
     try {
       setLoading(true);
       const userInfo = JSON.parse(localStorage.getItem("userInfo"));
-      await axios.post("http://localhost:5000/api/orders", {
+      await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/orders`, {
         items: cart.map(i => ({ product: i._id, quantity: i.quantity })),
         totalAmount: total,
         address,
@@ -84,7 +84,7 @@ export default function Checkout() {
     try {
       setLoading(true);
       const userInfo = JSON.parse(localStorage.getItem("userInfo"));
-      const { data } = await axios.post("http://localhost:5000/api/payment/create-order", 
+      const { data } = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/payment/create-order`, 
         { items: cart.map(i => ({ product: i._id, quantity: i.quantity })) },
         { headers: { Authorization: `Bearer ${userInfo?.token}` } }
       );
@@ -96,7 +96,7 @@ export default function Checkout() {
         order_id: data.id,
         name: "Pacha.Cart",
         handler: async (res) => {
-          await axios.post("http://localhost:5000/api/payment/verify", {
+          await axios.post(`${import.meta.env.VITE_API_BASE_URL}`, {
             ...res, address, items: cart.map(i => ({ product: i._id, quantity: i.quantity }))
           }, { headers: { Authorization: `Bearer ${userInfo?.token}` } });
           finishOrder();

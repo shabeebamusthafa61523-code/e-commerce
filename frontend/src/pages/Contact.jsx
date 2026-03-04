@@ -25,7 +25,7 @@ const ContactPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await axios.post(`http://localhost:5000/api/contact`, formData);
+      await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/contact`, formData);
       toast.success("Message sent! We'll be in touch soon.");
       setFormData({ name: "", email: "", subject: "General Inquiry", message: "" });
     } catch (err) {

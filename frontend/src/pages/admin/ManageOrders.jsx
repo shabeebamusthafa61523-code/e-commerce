@@ -9,7 +9,7 @@ export default function ManageOrders() {
   const fetchOrders = async () => {
     try {
       const userInfo = JSON.parse(localStorage.getItem("userInfo"));
-      const { data } = await axios.get("http://localhost:5000/api/admin/orders", {
+      const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/admin/orders`, {
         headers: { Authorization: `Bearer ${userInfo?.token}` },
       });
       setOrders(data || []);

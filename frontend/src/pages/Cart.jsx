@@ -16,7 +16,7 @@ const Cart = () => {
     if (!item.image) return "/placeholder.png";
     const pathString = Array.isArray(item.image) ? item.image[0] : item.image;
     const fileName = pathString.split(/[\\/]/).pop();
-    return `http://localhost:5000/uploads/${fileName}`;
+    return `${import.meta.env.VITE_API_BASE_URL}/uploads/${fileName}`;
   };
 
   return (

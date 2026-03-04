@@ -45,7 +45,7 @@ const ManageProducts = () => {
     try {
       const userInfo = JSON.parse(localStorage.getItem("userInfo"));
       await axios.put(
-        `http://localhost:5000/api/products/${productId}`,
+        `${import.meta.env.VITE_API_BASE_URL}/api/products/${productId}`,
         { 
           isFlashSale: !currentStatus,
           discountPrice: !currentStatus ? newPrice : 0 
@@ -63,7 +63,7 @@ const ManageProducts = () => {
     const rawImage = p.image || (p.images && p.images[0]);
     if (!rawImage) return "https://placehold.co/150?text=No+Image";
     const pathString = Array.isArray(rawImage) ? rawImage[0] : rawImage;
-    return pathString.startsWith("http") ? pathString : `http://localhost:5000/uploads/${pathString.split(/[\\/]/).pop()}`;
+    return pathString.startsWith("http") ? pathString : `${import.meta.env.VITE_API_BASE_URL}/uploads/${pathString.split(/[\\/]/).pop()}`;
   };
 
   return (

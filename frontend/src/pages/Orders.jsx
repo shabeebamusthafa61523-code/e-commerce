@@ -9,7 +9,7 @@ export default function Orders() {
   const fetchOrders = async () => {
     try {
       const userInfo = JSON.parse(localStorage.getItem("userInfo"));
-      const { data } = await axios.get("http://localhost:5000/api/orders/my-order", {
+      const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/orders/my-order`, {
         headers: { Authorization: `Bearer ${userInfo?.token}` },
       });
       setOrders(data || []);
@@ -29,7 +29,7 @@ export default function Orders() {
     if (!window.confirm("Are you sure you want to cancel this order?")) return;
     try {
       const userInfo = JSON.parse(localStorage.getItem("userInfo"));
-      await axios.put(`http://localhost:5000/api/orders/${orderId}/cancel`, {}, {
+      await axios.put(`${import.meta.env.VITE_API_BASE_URL}/api/orders/${orderId}/cancel`, {}, {
         headers: { Authorization: `Bearer ${userInfo?.token}` },
       });
       fetchOrders(); 
@@ -98,7 +98,7 @@ export default function Orders() {
                         const pathString = Array.isArray(rawImage) ? rawImage[0] : rawImage;
                         imageUrl = pathString.startsWith('http') 
                           ? pathString 
-                          : `http://localhost:5000/uploads/${pathString.split(/[\\/]/).pop()}`;
+                          : `${import.meta.env.VITE_API_BASE_URL}/uploads/${pathString.split(/[\\/]/).pop()}`;
                       }
 
                       return (

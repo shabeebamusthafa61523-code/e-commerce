@@ -8,7 +8,7 @@ export const fetchUsers = createAsyncThunk(
   async (_, { getState, rejectWithValue }) => {
     try {
       const { auth } = getState();
-      const { data } = await axios.get("http://localhost:5000/api/admin/users", {
+      const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/admin/users `, {
         headers: { Authorization: `Bearer ${auth.userInfo.token}` },
       });
       return data; // array of users

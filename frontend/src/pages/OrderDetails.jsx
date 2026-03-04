@@ -12,7 +12,7 @@ export default function OrderDetails() {
     try {
       const userInfo = JSON.parse(localStorage.getItem("userInfo"));
       const { data } = await axios.get(
-        `http://localhost:5000/api/orders/${id}`,
+        `${import.meta.env.VITE_API_BASE_URL}/api/orders/${id}`,
         {
           headers: { Authorization: `Bearer ${userInfo?.token}` },
         }
@@ -166,7 +166,7 @@ export default function OrderDetails() {
                 const pathString = Array.isArray(item.image) ? item.image[0] : item.image;
                 imageUrl = pathString.startsWith("http") 
                   ? pathString 
-                  : `http://localhost:5000/uploads/${pathString.split(/[\\/]/).pop()}`;
+                  : `${import.meta.env.VITE_API_BASE_URL}/uploads/${pathString.split(/[\\/]/).pop()}`;
               }
 
               return (

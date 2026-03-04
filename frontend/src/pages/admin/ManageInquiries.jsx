@@ -15,7 +15,7 @@ const ManageInquiries = () => {
     try {
       setLoading(true);
       const config = { headers: { Authorization: `Bearer ${userInfo?.token}` } };
-      const { data } = await axios.get("http://localhost:5000/api/contact", config);
+      const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/contact`, config);
       setMessages(Array.isArray(data) ? data : data.messages || []);
     } catch (error) {
       toast.error("Failed to load messages");
@@ -29,7 +29,7 @@ const ManageInquiries = () => {
   const handleMarkAsRead = async (id) => {
     try {
       const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
-      await axios.put(`http://localhost:5000/api/contact/${id}`, { status: "Read" }, config);
+      await axios.put(`${import.meta.env.VITE_API_BASE_URL}/api/contact/${id}`, { status: "Read" }, config);
       toast.success("Marked as read");
       fetchMessages(); 
     } catch (err) { toast.error("Error updating status"); }

@@ -130,7 +130,7 @@ const Home = () => {
             {flashSaleItems.map((product) => (
               <div key={product._id} onClick={() => navigate(`/product/${product._id}`)} className="group/item flex items-center gap-4 p-3 bg-red-50/30 rounded-[1.5rem] border border-transparent hover:border-red-100 hover:bg-white hover:shadow-xl hover:shadow-red-200/40 transition-all duration-300 cursor-pointer">
                 <div className="relative w-16 h-16 rounded-2xl overflow-hidden bg-white shadow-sm border border-red-50">
-                  <img src={product.images?.[0]?.startsWith('http') ? product.images[0] : `http://localhost:5000/${product.images?.[0]?.replace(/^\//, '')}`} className="w-full h-full object-cover transition-transform duration-500 group-hover/item:scale-110" alt={product.name} />
+                  <img src={product.images?.[0]?.startsWith('http') ? product.images[0] : `${import.meta.env.VITE_API_BASE_URL}/${product.images?.[0]?.replace(/^\//, '')}`} className="w-full h-full object-cover transition-transform duration-500 group-hover/item:scale-110" alt={product.name} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <h4 className="font-bold text-sm text-slate-800 truncate group-hover/item:text-red-600 transition-colors">{product.name}</h4>

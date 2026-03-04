@@ -49,7 +49,7 @@ const EditProduct = () => {
       // Set existing image preview if available
       if (existingProduct.image) {
         const img = Array.isArray(existingProduct.image) ? existingProduct.image[0] : existingProduct.image;
-        setPreview(img.startsWith('http') ? img : `http://localhost:5000/uploads/${img.split(/[\\/]/).pop()}`);
+        setPreview(img.startsWith('http') ? img : `${import.meta.env.VITE_API_BASE_URL}/uploads/${img.split(/[\\/]/).pop()}`);
       }
     }
   }, [existingProduct]);
