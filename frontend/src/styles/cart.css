@@ -1,0 +1,14 @@
+.cart-item {
+  background: white;
+  padding: 15px;
+  margin-bottom: 10px;
+  border-radius: 8px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.cart-summary {
+  margin-top: 20px;
+  font-size: 18px;
+  font-weight: bold;
+}
