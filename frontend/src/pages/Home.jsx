@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { fetchProducts } from "../features/products/productSlice";
+import { fetchProducts } from "../features/products/ProductSlice";
 
 import ProductList from "../components/product/ProductList";
 import Aisearch from "../components/ai/Aisearch";
