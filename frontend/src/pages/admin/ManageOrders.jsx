@@ -87,11 +87,15 @@ export default function ManageOrders() {
                   {order.items.map((item, idx) => (
                     <div key={idx} className="flex items-center justify-between bg-slate-50/30 p-4 rounded-2xl border border-slate-50">
                       <div className="flex items-center gap-4">
-                        <img 
-                          src={item.image || "https://placehold.co/150"} 
-                          alt={item.name} 
-                          className="w-14 h-14 object-cover rounded-xl" 
-                        />
+                       <img 
+  src={
+    item.image 
+      ? `${import.meta.env.VITE_API_BASE_URL}${item.image}` 
+      : "https://placehold.co/150"
+  } 
+  alt={item.name} 
+  className="w-14 h-14 object-cover rounded-xl" 
+/>
                         <div>
                           <h4 className="font-bold text-slate-800 text-sm">{item.name}</h4>
                           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">

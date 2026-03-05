@@ -35,8 +35,10 @@ const ProductCard = ({ product }) => {
       {/* Image */}
  <img
   src={
-    product.images && product.images.length > 0
-      ? `${import.meta.env.VITE_API_BASE_URL}${product.images[0]}`
+    product.images?.[0]
+      ? product.images[0].startsWith('http')
+        ? product.images[0]
+        : `${import.meta.env.VITE_API_BASE_URL}/${product.images[0].replace(/^\//, '')}`
       : "/placeholder.png"
   }
   alt={product.name}
