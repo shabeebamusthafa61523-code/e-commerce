@@ -33,10 +33,10 @@ const ProductCard = ({ product }) => {
       </button>
 
       {/* Image */}
-  <img
+ <img
   src={
     product.images && product.images.length > 0
-      ? product.images[0]
+      ? `${import.meta.env.VITE_API_BASE_URL}${product.images[0]}`
       : "/placeholder.png"
   }
   alt={product.name}

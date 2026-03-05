@@ -51,11 +51,15 @@ const ProductDetails = () => {
                 <FaBolt /> Flash Sale
               </div>
             )}
-            <img
-              src={product.images?.[0] || "/placeholder.png"}
-              alt={product.name}
-              className="w-full max-h-[500px] object-contain transition-transform duration-700 group-hover:scale-110"
-            />
+           <img
+  src={
+    product.images?.[0] 
+    ? `${import.meta.env.VITE_API_BASE_URL}${product.images[0]}` 
+    : "/placeholder.png"
+  }
+  alt={product.name}
+  className="w-full max-h-[500px] object-contain transition-transform duration-700 group-hover:scale-110"
+/>
           </div>
 
           {/* Details Section */}

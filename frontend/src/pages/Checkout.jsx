@@ -95,12 +95,20 @@ export default function Checkout() {
         currency: "INR",
         order_id: data.id,
         name: "Pacha.Cart",
-        handler: async (res) => {
-          await axios.post(`${import.meta.env.VITE_API_BASE_URL}`, {
-            ...res, address, items: cart.map(i => ({ product: i._id, quantity: i.quantity }))
-          }, { headers: { Authorization: `Bearer ${userInfo?.token}` } });
-          finishOrder();
-        },
+       handler: async (res) => {
+  try {
+    await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/orders`, { // Added /api/orders
+      ...res, 
+      address, 
+      paymentMethod: "Razorpay",
+      totalAmount: total,
+      items: cart.map(i => ({ product: i._id, quantity: i.quantity }))
+    }, { headers: { Authorization: `Bearer ${userInfo?.token}` } });
+    finishOrder();
+  } catch (error) {
+    alert("Payment verification failed on server");
+  }
+},
         theme: { color: "#10b981" }
       };
       new window.Razorpay(options).open();
