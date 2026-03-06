@@ -8,14 +8,9 @@ const productSchema = new mongoose.Schema(
     category: { type: String, required: true },
     stock: { type: Number, default: 0 },
     description: { type: String },
-image: {
-    type: String, // 🔥 Change this from Object to String
-    required: true
-  },
-  images: {
-  type: [String],
-  default: [],
-},    nutritionInfo: { type: String },
+image: { type: String, required: true }, 
+  images: [{ type: String }],
+    nutritionInfo: { type: String },
     isOrganic: { type: Boolean, default: false },
     rating: { type: Number, default: 0 },
     numReviews: { type: Number, default: 0 },
