@@ -58,8 +58,13 @@ const createProduct = async (req, res) => {
 
     const createdProduct = await product.save();
     res.status(201).json(createdProduct);
-  } catch (error) {
-    console.error("Create Error:", error);
+  }  catch (error) {
+    // This will print the actual error message and stack trace in Render logs
+    console.error("Detailed Create Error:", {
+      message: error.message,
+      stack: error.stack,
+      body: req.body
+    });
     res.status(400).json({ message: error.message });
   }
 };

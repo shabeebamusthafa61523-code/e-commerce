@@ -35,24 +35,25 @@ export const deleteProduct = createAsyncThunk(
 );
 
 /* ================= UPDATE ================= */
+/* ================= UPDATE ================= */
 export const updateProduct = createAsyncThunk(
   "product/updateProduct",
   async ({ id, updatedData }, { getState, rejectWithValue }) => {
     try {
-      const { userInfo } = getState().auth; // 🔥 FIXED PATH
+      const { userInfo } = getState().auth;
 
       const { data } = await axios.put(
         `${API_URL}/${id}`,
-        updatedData,
+        updatedData, // This should be FormData from your component
         {
           headers: {
             Authorization: `Bearer ${userInfo.token}`,
-            // "Content-Type": "multipart/form-data",
+            // Remove manual Content-Type; Axios handles it for FormData
           },
         }
       );
 
-      return data; // return updated product
+      return data;
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || error.message
@@ -89,10 +90,11 @@ const productSlice = createSlice({
       })
 
       /* UPDATE */
-      .addCase(updateProduct.fulfilled, (state, action) => {
-        state.products = state.products.map((p) =>
-          p._id === action.payload._id ? action.payload : p
-        );
+      /* UPDATE REJECTED */
+      .addCase(updateProduct.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      
       });
   },
 });
