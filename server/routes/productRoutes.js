@@ -1,7 +1,10 @@
 const express = require("express");
 const router = express.Router();
 const { protect, admin } = require("../middleware/authMiddleware");
-const upload = require("../middleware/uploadMiddleware"); 
+
+// FIX: Removed the old local uploadMiddleware to avoid naming conflicts
+// Only import the Cloudinary upload config
+const { upload } = require("../config/cloudinary"); 
 
 const {
   getProducts,
@@ -12,39 +15,34 @@ const {
   createBulkProducts,
 } = require("../controllers/productController");
 
-
-
-// Public routes
+// --- Public routes ---
 router.get("/", getProducts);
 router.get("/:id", getProductById);
 
-// Admin routes
+// --- Admin routes ---
+
+// Create Product: upload.single("image") now sends directly to Cloudinary
 router.post(
   "/",
   protect,
   admin,
-  upload.single("image"), // 👈 Now this works
+  upload.single("image"), 
   createProduct
 );
 
+// Bulk insert
 router.post("/bulk", protect, admin, createBulkProducts);
-// router.post("/", async (req, res) => {
-//   console.log(req.body);
-//   res.json(req.body);
-// });
-// In your backend route
-// router.get("/products", async (req, res) => {
-//   const searchQuery = req.query.search;
-//   try {
-//     const products = await Product.find({
-//       name: { $regex: `^${searchQuery}$`, $options: "i" } // exact match, case-insensitive
-//     });
-//     res.json(products);
-//   } catch (err) {
-//     res.status(500).json({ message: err.message });
-//   }
-// });
-router.put("/:id", protect, admin, upload.single("image"), updateProduct);
+
+// Update Product: Now handles cloud upload automatically
+router.put(
+  "/:id", 
+  protect, 
+  admin, 
+  upload.single("image"), 
+  updateProduct
+);
+
+// Delete Product
 router.delete("/:id", protect, admin, deleteProduct);
 
 module.exports = router;

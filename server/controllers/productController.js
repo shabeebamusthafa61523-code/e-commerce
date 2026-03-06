@@ -10,29 +10,11 @@ const getProducts = async (req, res) => {
       filter.category = { $regex: new RegExp(`^${category}$`, "i") };
     }
 
+    // Since Cloudinary URLs are stored as full strings in the DB, 
+    // we don't need the 'host' or 'protocol' logic anymore.
     let products = await Product.find(filter).lean();
 
-    // FIX: Force HTTPS to prevent "Mixed Content" on Vercel
-// Add this helper inside your controller functions
-const isLocal = req.get("host").includes("localhost");
-const protocol = isLocal ? "http://" : "https://";
-const host = protocol + req.get("host");
-
-    const updatedProducts = products.map(p => {
-      if (p.image && !p.image.startsWith('http')) {
-        const cleanPath = p.image.startsWith('/') ? p.image : `/${p.image}`;
-        p.image = host + cleanPath;
-      }
-
-      if (Array.isArray(p.images)) {
-        p.images = p.images.map(img => 
-          img.startsWith('http') ? img : host + (img.startsWith('/') ? img : `/${img}`)
-        );
-      }
-      return p;
-    });
-
-    res.json(updatedProducts);
+    res.json(products);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -43,16 +25,6 @@ const getProductById = async (req, res) => {
   try {
     const product = await Product.findById(req.params.id).lean();
     if (!product) return res.status(404).json({ message: "Product not found" });
-
-// Add this helper inside your controller functions
-const isLocal = req.get("host").includes("localhost");
-const protocol = isLocal ? "http://" : "https://";
-const host = protocol + req.get("host");
-
-if (product.image && !product.image.startsWith('http')) {
-      const cleanPath = product.image.startsWith('/') ? product.image : `/${product.image}`;
-      product.image = host + cleanPath;
-    }
 
     res.json(product);
   } catch (error) {
@@ -66,22 +38,28 @@ const createProduct = async (req, res) => {
     const { name, brand, price, discountPrice, category, stock, description, isOrganic, isFlashSale } = req.body;
 
     const product = new Product({
-      name, brand, price: Number(price), discountPrice: Number(discountPrice) || 0,
-      category, stock: Number(stock), description,
+      name, 
+      brand, 
+      price: Number(price), 
+      discountPrice: Number(discountPrice) || 0,
+      category, 
+      stock: Number(stock), 
+      description,
       isOrganic: isOrganic === 'true' || isOrganic === true,
       isFlashSale: isFlashSale === 'true' || isFlashSale === true,
       images: [], 
     });
 
+    // When using Cloudinary, req.file.path contains the full HTTPS URL
     if (req.file) {
-      const filePath = `/uploads/${req.file.filename}`;
-      product.image = filePath;
-      product.images.push(filePath);
+      product.image = req.file.path; 
+      product.images.push(req.file.path);
     }
 
     const createdProduct = await product.save();
     res.status(201).json(createdProduct);
   } catch (error) {
+    console.error("Create Error:", error);
     res.status(400).json({ message: error.message });
   }
 };
@@ -92,6 +70,7 @@ const updateProduct = async (req, res) => {
     const product = await Product.findById(req.params.id);
     if (!product) return res.status(404).json({ message: "Product not found" });
 
+    // Update text fields
     product.name = req.body.name || product.name;
     product.brand = req.body.brand || product.brand;
     product.price = req.body.price ? Number(req.body.price) : product.price;
@@ -100,13 +79,17 @@ const updateProduct = async (req, res) => {
     product.stock = req.body.stock !== undefined ? Number(req.body.stock) : product.stock;
     product.description = req.body.description || product.description;
     
-    if (req.body.isOrganic !== undefined) product.isOrganic = req.body.isOrganic === 'true' || req.body.isOrganic === true;
-    if (req.body.isFlashSale !== undefined) product.isFlashSale = req.body.isFlashSale === 'true' || req.body.isFlashSale === true;
+    if (req.body.isOrganic !== undefined) {
+      product.isOrganic = req.body.isOrganic === 'true' || req.body.isOrganic === true;
+    }
+    if (req.body.isFlashSale !== undefined) {
+      product.isFlashSale = req.body.isFlashSale === 'true' || req.body.isFlashSale === true;
+    }
 
+    // Update image if a new one is uploaded via Cloudinary
     if (req.file) {
-      const filePath = `/uploads/${req.file.filename}`;
-      product.image = filePath;
-      product.images = [filePath];
+      product.image = req.file.path;
+      product.images = [req.file.path];
     }
 
     const updatedProduct = await product.save();
@@ -140,5 +123,11 @@ const createBulkProducts = async (req, res) => {
   }
 };
 
-// ONE SINGLE EXPORT AT THE END
-module.exports = { getProducts, getProductById, createProduct, updateProduct, deleteProduct, createBulkProducts };
+module.exports = { 
+  getProducts, 
+  getProductById, 
+  createProduct, 
+  updateProduct, 
+  deleteProduct, 
+  createBulkProducts 
+};
