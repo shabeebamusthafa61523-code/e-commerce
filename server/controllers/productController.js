@@ -1,7 +1,8 @@
 const Product = require("../models/Product");
 
-// @desc    Get all products
-// @route   GET /api/products
+
+
+// GET all products
 const getProducts = async (req, res) => {
   try {
     const { category } = req.query;
@@ -11,23 +12,21 @@ const getProducts = async (req, res) => {
       filter.category = { $regex: new RegExp(`^${category}$`, "i") };
     }
 
+    // Using .lean() to get plain JS objects for easier modification
     let products = await Product.find(filter).lean();
 
-    // FIX: Force HTTPS to prevent "Mixed Content" errors on Render
-    const host = "https://" + req.get("host");
+    const host = req.protocol + "://" + req.get("host");
 
     const updatedProducts = products.map(p => {
-      // Format the main 'image'
+      // 1. Correctly format the main 'image' string
       if (p.image && !p.image.startsWith('http')) {
-        // Ensure path starts with a slash
-        const path = p.image.startsWith('/') ? p.image : `/${p.image}`;
-        p.image = host + path;
+        p.image = host + p.image;
       }
 
-      // Format the 'images' array
+      // 2. Correctly format every string in the 'images' array
       if (Array.isArray(p.images)) {
         p.images = p.images.map(img => 
-          img.startsWith('http') ? img : host + (img.startsWith('/') ? img : `/${img}`)
+          img.startsWith('http') ? img : host + img
         );
       }
       return p;
@@ -39,27 +38,7 @@ const getProducts = async (req, res) => {
   }
 };
 
-// @desc    Get single product
-// @route   GET /api/products/:id
-const getProductById = async (req, res) => {
-  try {
-    const product = await Product.findById(req.params.id).lean();
-    if (!product) return res.status(404).json({ message: "Product not found" });
-
-    const host = "https://" + req.get("host");
-    if (product.image && !product.image.startsWith('http')) {
-      const path = product.image.startsWith('/') ? product.image : `/${product.image}`;
-      product.image = host + path;
-    }
-
-    res.json(product);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-// @desc    Create a product
-// @route   POST /api/products
+// CREATE Product (Admin)
 const createProduct = async (req, res) => {
   try {
     const { 
@@ -75,16 +54,16 @@ const createProduct = async (req, res) => {
       category,
       stock: Number(stock),
       description,
+      // Handle Boolean conversion from FormData strings
       isOrganic: isOrganic === 'true' || isOrganic === true,
       isFlashSale: isFlashSale === 'true' || isFlashSale === true,
       images: [], 
     });
 
     if (req.file) {
-      // Store relative path in DB: /uploads/filename.jpg
       const filePath = `/uploads/${req.file.filename}`;
-      product.image = filePath;
-      product.images.push(filePath);
+      product.image = filePath; // Main path
+      product.images.push(filePath); // Array path
     }
 
     const createdProduct = await product.save();
@@ -95,13 +74,13 @@ const createProduct = async (req, res) => {
   }
 };
 
-// @desc    Update a product
-// @route   PUT /api/products/:id
+// UPDATE Product (Admin)
 const updateProduct = async (req, res) => {
   try {
     const product = await Product.findById(req.params.id);
     if (!product) return res.status(404).json({ message: "Product not found" });
 
+    // Update basic fields
     product.name = req.body.name || product.name;
     product.brand = req.body.brand || product.brand;
     product.price = req.body.price ? Number(req.body.price) : product.price;
@@ -110,6 +89,7 @@ const updateProduct = async (req, res) => {
     product.stock = req.body.stock !== undefined ? Number(req.body.stock) : product.stock;
     product.description = req.body.description || product.description;
     
+    // Handle Boolean updates carefully
     if (req.body.isOrganic !== undefined) {
       product.isOrganic = req.body.isOrganic === 'true' || req.body.isOrganic === true;
     }
@@ -117,10 +97,11 @@ const updateProduct = async (req, res) => {
       product.isFlashSale = req.body.isFlashSale === 'true' || req.body.isFlashSale === true;
     }
 
+    // Handle new image upload
     if (req.file) {
       const filePath = `/uploads/${req.file.filename}`;
       product.image = filePath;
-      product.images = [filePath]; 
+      product.images = [filePath]; // Resetting to new image
     }
 
     const updatedProduct = await product.save();
@@ -131,43 +112,155 @@ const updateProduct = async (req, res) => {
   }
 };
 
-// @desc    Delete a product
-// @route   DELETE /api/products/:id
-const deleteProduct = async (req, res) => {
+// ... keep getProductById, createBulkProducts, and deleteProduct as they are
+
+const getProductById = async (req, res) => {
   try {
     const product = await Product.findById(req.params.id);
     if (!product) return res.status(404).json({ message: "Product not found" });
 
-    await product.deleteOne();
-    res.json({ message: "Product removed successfully" });
+    const host = req.protocol + "://" + req.get("host");
+    if (product.image) product.image = host + product.image;
+
+    res.json(product);
   } catch (error) {
-    res.status(500).json({ message: "Server error while deleting product" });
+    res.status(500).json({ message: error.message });
   }
 };
 
-// @desc    Bulk create products
+// CREATE / UPDATE / DELETE (Admin)
+// const createProduct = async (req, res) => {
+//   try {
+//     const { name, brand, price, category, stock, description, isOrganic } = req.body;
+
+//     const product = new Product({
+//       name,
+//       brand,
+//       price,
+//       category,
+//       stock,
+//       description,
+//       isOrganic,
+//       images: [], // initialize empty array
+//     });
+
+//     if (req.file) {
+//       const host = req.protocol + "://" + req.get("host"); // http://localhost:5000
+//       product.images.push(host + `/uploads/${req.file.filename}`);
+//     }
+
+//     const createdProduct = await product.save();
+//     res.status(201).json(createdProduct);
+
+//   } catch (error) {
+//     console.error(error);
+//     res.status(400).json({ message: error.message });
+//   }
+// };
+
+//bulk
 const createBulkProducts = async (req, res) => {
   try {
+    console.log("BODY:", req.body);
+
+    // Must send array from Postman
     if (!Array.isArray(req.body)) {
-      return res.status(400).json({ message: "Request body must be an array" });
+      return res.status(400).json({
+        message: "Request body must be an array of products",
+      });
     }
+
+    // Optional: Validate required fields manually
+    for (let item of req.body) {
+      if (!item.name || !item.price || !item.category) {
+        return res.status(400).json({
+          message: "Each product must have name, price, and category",
+        });
+      }
+    }
+
     const products = await Product.insertMany(req.body);
+
     res.status(201).json({
       message: "Bulk products inserted successfully",
       count: products.length,
       products,
     });
+
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    console.error(error);
+    res.status(400).json({
+      message: error.message,
+    });
   }
 };
 
-// IMPORTANT: Single unified export to prevent overwriting
-module.exports = { 
-  getProducts, 
-  getProductById, 
-  createProduct, 
-  updateProduct, 
-  deleteProduct, 
-  createBulkProducts 
+module.exports = {
+  createBulkProducts,
 };
+
+
+
+// const updateProduct = async (req, res) => {
+//   try {
+//     const product = await Product.findById(req.params.id);
+
+//     if (!product) {
+//       return res.status(404).json({ message: "Product not found" });
+//     }
+
+// console.log("BODY:", req.body);
+//     console.log("FILE:", req.file)
+
+//     // Update fields
+//     product.name = req.body.name || product.name;
+//     product.brand = req.body.brand || product.brand;
+//     product.price = req.body.price || product.price;
+//     product.category = req.body.category || product.category;
+//     product.stock = req.body.stock || product.stock;
+//     product.description = req.body.description || product.description;
+//     product.nutritionInfo =
+//       req.body.nutritionInfo || product.nutritionInfo;
+//     product.isOrganic =
+//       req.body.isOrganic !== undefined
+//         ? req.body.isOrganic
+//         : product.isOrganic;
+
+//     // If new image uploaded
+//     if (req.file) {
+//   const host = req.protocol + "://" + req.get("host");
+//   // Add to images array or replace first image
+//   product.images = [host + `/uploads/${req.file.filename}`];
+// }
+//     const updatedProduct = await product.save(); // 🔥 VERY IMPORTANT
+
+//     res.json(updatedProduct);
+//   } catch (error) {
+//     console.error("Update Error:", error);
+//     res.status(500).json({ message: "Server error while updating product" });
+//   }
+// };
+
+
+const deleteProduct = async (req, res) => {
+  try {
+    const product = await Product.findById(req.params.id);
+
+    if (!product) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+
+    await product.deleteOne(); // modern way
+
+    res.json({ message: "Product removed successfully" });
+
+  } catch (error) {
+    console.error("Delete Error:", error);
+    res.status(500).json({ message: "Server error while deleting product" });
+  }
+};
+
+
+
+
+module.exports = { getProducts, getProductById, createProduct, updateProduct, deleteProduct,createBulkProducts };
