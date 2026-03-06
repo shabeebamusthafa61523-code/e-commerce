@@ -8,8 +8,11 @@ const productSchema = new mongoose.Schema(
     category: { type: String, required: true },
     stock: { type: Number, default: 0 },
     description: { type: String },
-image: { url: String, public_id: String },
-images: {
+image: {
+    type: String, // 🔥 Change this from Object to String
+    required: true
+  },
+  images: {
   type: [String],
   default: [],
 },    nutritionInfo: { type: String },

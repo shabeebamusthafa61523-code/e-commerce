@@ -13,7 +13,10 @@ const getProducts = async (req, res) => {
     let products = await Product.find(filter).lean();
 
     // FIX: Force HTTPS to prevent "Mixed Content" on Vercel
-    const host = "https://" + req.get("host");
+// Add this helper inside your controller functions
+const isLocal = req.get("host").includes("localhost");
+const protocol = isLocal ? "http://" : "https://";
+const host = protocol + req.get("host");
 
     const updatedProducts = products.map(p => {
       if (p.image && !p.image.startsWith('http')) {
@@ -41,8 +44,12 @@ const getProductById = async (req, res) => {
     const product = await Product.findById(req.params.id).lean();
     if (!product) return res.status(404).json({ message: "Product not found" });
 
-    const host = "https://" + req.get("host");
-    if (product.image && !product.image.startsWith('http')) {
+// Add this helper inside your controller functions
+const isLocal = req.get("host").includes("localhost");
+const protocol = isLocal ? "http://" : "https://";
+const host = protocol + req.get("host");
+
+if (product.image && !product.image.startsWith('http')) {
       const cleanPath = product.image.startsWith('/') ? product.image : `/${product.image}`;
       product.image = host + cleanPath;
     }
