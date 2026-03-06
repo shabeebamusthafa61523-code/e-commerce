@@ -70,8 +70,6 @@ const toggleAvailability = async (req, res) => {
   }
 };
 
-const User = require("../models/User");
-const bcrypt = require("bcryptjs");
 
 // @desc    Register a new delivery partner
 // @route   POST /api/delivery/register
