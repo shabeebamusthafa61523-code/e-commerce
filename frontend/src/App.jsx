@@ -31,6 +31,12 @@ import CategoryPage from "./pages/CategoryPage";
 import Profile from "./pages/Profile";
 import AdminSidebar from "./components/admin/AdminSidebar";
 import ManageInquiries from "./pages/admin/ManageInquiries";
+import DeliveryAssign from "./pages/admin/AdminAssignRow";
+import DeliveryLayout from "./components/Delivery/DeliveryLayout";
+import DeliveryDashboard from "./pages/delivery/DeliveryDashboard";
+import DeliveryHistory from "./components/Delivery/DeliveryHistory";
+import DeliveryProfile from "./components/Delivery/DeliveryProfile";
+import DeliveryManagement from "./pages/admin/DeliveryManagement";
 
 function App() {
   const [isAdminSidebarOpen, setIsAdminSidebarOpen] = useState(false);
@@ -38,6 +44,10 @@ function App() {
   const toggleAdminSidebar = () => {
     setIsAdminSidebarOpen((prev) => !prev);
   };
+  const DeliveryRoute = ({ children }) => {
+  const { userInfo } = useSelector((state) => state.userLogin);
+  return userInfo && userInfo.role === 'delivery' ? children : <Navigate to="/login" />;
+};
   return (
     <Router>
       {/* <AuthProvider> */}
@@ -60,14 +70,25 @@ function App() {
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+
         <Route path="/products" element={<Products />} />
         <Route path="/about" element={<About />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="/help" element={<Help />} />
+
+        {/* Delivery Routes Wrapped in Layout */}
+        <Route path="/delivery" element={<DeliveryLayout />}>
+          <Route index element={<DeliveryDashboard />} /> {/* /delivery */}
+          <Route path="history" element={<DeliveryHistory />} /> {/* /delivery/history */}
+          <Route path="profile" element={<DeliveryProfile />} /> {/* /delivery/profile */}
+        </Route>
+
         <Route path="/admin/products" element={<ManageProducts />} />
         <Route path="/admin/orders" element={<ManageOrders/>} />
         <Route path="/admin/users" element={<AdminUsers/>} />
         <Route path="/admin/inquiries" element={<ManageInquiries/>} />
+        <Route path="/admin/delivery" element={<DeliveryAssign/>} />
+        <Route path="/admin/deliverymanage" element={<DeliveryManagement/>} />
         <Route path="/product/:id" element={<ProductDetails/>} />
         <Route path="/order/:id" element={<OrderDetails/>} />
 <Route path="/category/:categoryName" element={<CategoryPage />} />

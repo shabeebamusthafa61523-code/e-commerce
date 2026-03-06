@@ -19,15 +19,18 @@ export default function Login() {
     dispatch(loginUser(form));
   };
 
-  useEffect(() => {
-    if (userInfo) {
-      if (userInfo.role === "admin") {
-        navigate("/admin");
-      } else {
-        navigate("/");
-      }
+ // Inside your login success handler or useEffect
+useEffect(() => {
+  if (userInfo) {
+    if (userInfo.role === 'delivery') {
+      navigate('/delivery/dashboard');
+    } else if (userInfo.role === 'admin') {
+      navigate('/admin/dashboard');
+    } else {
+      navigate('/home');
     }
-  }, [userInfo, navigate]);
+  }
+}, [userInfo, navigate]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50 px-6 font-sans relative overflow-hidden">

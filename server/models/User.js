@@ -11,8 +11,21 @@ const userSchema = mongoose.Schema(
     city: String,
     state: String,
     pincode: String,
-    role: { type: String, default: "user" },
-  },
+role: { 
+      type: String, 
+      enum: ["user", "admin", "delivery"], 
+      default: "user" 
+    },// Specific fields for the Delivery Role
+    isAvailable: { 
+      type: Boolean, 
+      default: true // Only relevant if role is "delivery"
+    },
+    vehicleNumber: { type: String }, 
+    currentLocation: {
+      lat: Number,
+      lng: Number
+    }
+    },
   { timestamps: true }
 );
 

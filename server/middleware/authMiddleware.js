@@ -28,5 +28,12 @@ const admin = (req, res, next) => {
   if (req.user && req.user.role === "admin") next();
   else res.status(403).json({ message: "Admin only access" });
 };
+const delivery = (req, res, next) => {
+  if (req.user && req.user.role === "delivery") {
+    next();
+  } else {
+    res.status(403).json({ message: "Delivery partner access only" });
+  }
+};
 
-module.exports = { protect, admin };
+module.exports = { protect, admin, delivery};

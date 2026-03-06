@@ -3,6 +3,11 @@ const mongoose = require("mongoose");
 const orderSchema = new mongoose.Schema(
   {
     user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    deliveryPartner: { 
+      type: mongoose.Schema.Types.ObjectId, 
+      ref: "User", 
+      default: null 
+    },
     items: [
       {
        product: { type: mongoose.Schema.Types.ObjectId, ref: "Product" },
@@ -16,8 +21,15 @@ const orderSchema = new mongoose.Schema(
     // paymentStatus: { type: String, enum: ["pending", "paid"], default: "pending" },
     orderStatus: { 
       type: String, 
-      enum: ["processing", "shipped", "delivered", "cancelled"], 
-      default: "processing" 
+enum: [
+        "processing", 
+        "assigned",      // Admin has picked a driver
+        "picked up",     // Driver has the groceries
+        "out for delivery", 
+        "delivered", 
+        "cancelled"
+      ],
+            default: "processing" 
     },
    shippingAddress: {
   fullName: String,
@@ -39,6 +51,9 @@ isPaid: {
 paidAt: {
   type: Date,
 },
+assignedAt: Date,
+    pickedUpAt: Date,
+    
 deliveredAt: Date,
 razorpayOrderId: String,
 razorpayPaymentId: String,

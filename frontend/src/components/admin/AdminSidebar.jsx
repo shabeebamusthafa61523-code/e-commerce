@@ -11,7 +11,9 @@ export default function AdminSidebar({ isOpen, onClose }) {
     { label: "Inventory", path: "/admin/products", icon: "📦" },
     { label: "Logistics", path: "/admin/orders", icon: "🚚" },
     { label: "Customers", path: "/admin/users", icon: "👥" },
-    { label: "ManageInquiries", path: "/admin/inquiries", icon: "👥" },
+    { label: "ManageInquiries", path: "/admin/inquiries", icon: "💬" },
+    { label: "Delivery Partners", path: "/admin/delivery", icon: "🛵" },
+    { label: "Manage Delivery", path: "/admin/deliverymanage", icon: "🛵" },
   ];
 
   return (
