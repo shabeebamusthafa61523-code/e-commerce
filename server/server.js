@@ -1,7 +1,6 @@
-require("dotenv").config(); // MUST BE FIRST
-
+require("dotenv").config();
 const path = require("path");
-const express = require("express"); // 👈 ADD THIS
+const express = require("express");
 const connectDB = require("./config/db");
 const app = require("./app");
 
@@ -9,10 +8,10 @@ connectDB();
 
 const PORT = process.env.PORT || 5000;
 
-// Make uploads folder public
-// Serve uploads folder publicly
+// FIX: Static path configuration for Vercel
+// This allows the browser to find the images you pushed to GitHub
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 app.listen(PORT, () => {
-  console.log(` Backend running on port ${PORT}`);
+  console.log(`Backend running on port ${PORT}`);
 });
