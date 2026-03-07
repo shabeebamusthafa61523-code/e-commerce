@@ -40,14 +40,16 @@ export default function ManageOrders() {
     }
   };
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case "delivered": return "bg-emerald-50 text-emerald-600 border-emerald-100";
-      case "shipped": return "bg-blue-50 text-blue-600 border-blue-100";
-      case "cancelled": return "bg-red-50 text-red-600 border-red-100";
-      default: return "bg-amber-50 text-amber-600 border-amber-100";
-    }
-  };
+ const getStatusColor = (status) => {
+  switch (status) {
+    case "delivered": return "bg-emerald-50 text-emerald-600 border-emerald-100";
+    case "out for delivery":
+    case "shipped": return "bg-blue-50 text-blue-600 border-blue-100";
+    case "picked up": return "bg-purple-50 text-purple-600 border-purple-100";
+    case "cancelled": return "bg-red-50 text-red-600 border-red-100";
+    default: return "bg-amber-50 text-amber-600 border-amber-100";
+  }
+};
 
   return (
     <div className="flex min-h-screen bg-slate-50 font-sans">
@@ -121,9 +123,11 @@ export default function ManageOrders() {
                       className="bg-slate-900 text-white px-4 py-2 rounded-xl text-xs font-black outline-none cursor-pointer focus:ring-2 focus:ring-emerald-500 transition-all"
                     >
                       <option value="processing">Processing</option>
-                      <option value="shipped">Shipped</option>
-                      <option value="delivered">Delivered</option>
-                      <option value="cancelled">Cancelled</option>
+  <option value="assigned">Assigned</option>
+  <option value="picked up">Picked Up</option>
+  <option value="out for delivery">Out for Delivery</option> {/* Match Backend */}
+  <option value="delivered">Delivered</option>
+  <option value="cancelled">Cancelled</option>
                     </select>
                   </div>
                 </div>
