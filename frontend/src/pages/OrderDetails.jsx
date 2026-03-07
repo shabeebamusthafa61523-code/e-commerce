@@ -1,7 +1,17 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { useParams, useNavigate } from "react-router-dom";
-import { FaCheck, FaLeaf, FaTimes, FaDownload, FaPrint, FaArrowLeft, FaPhoneAlt, FaMapMarkerAlt  } from "react-icons/fa";
+import { 
+  FaCheck, 
+  FaLeaf, 
+  FaTimes, 
+  FaPrint, 
+  FaArrowLeft, 
+  FaPhoneAlt, 
+  FaMapMarkerAlt 
+} from "react-icons/fa";
+import logo from "../assets/logo.png";
+
 
 export default function OrderDetails() {
   const { id } = useParams();
@@ -10,7 +20,14 @@ export default function OrderDetails() {
   const [loading, setLoading] = useState(true);
   const [showInvoice, setShowInvoice] = useState(false);
 
-  const statusSteps = ["processing", "assigned", "picked up", "out for delivery", "delivered"];
+  // Matches the exact enums in your Mongoose Schema
+  const statusSteps = [
+    "processing", 
+    "assigned", 
+    "picked up", 
+    "out for delivery", 
+    "delivered"
+  ];
 
   const fetchOrder = async () => {
     try {
@@ -56,7 +73,7 @@ export default function OrderDetails() {
             onClick={() => navigate(-1)}
             className="flex items-center gap-2 text-slate-400 font-black text-[10px] uppercase tracking-widest hover:text-emerald-600 transition-colors"
           >
-            <FaArrowLeft /> Back
+            <FaArrowLeft /> Back to Orders
           </button>
           <button 
             onClick={() => setShowInvoice(true)}
@@ -89,7 +106,7 @@ export default function OrderDetails() {
             <div className="absolute top-5 left-10 right-10 h-[2px] bg-slate-100 z-0"></div>
             <div 
               className="absolute top-5 left-10 h-[2px] bg-emerald-500 z-0 transition-all duration-1000"
-              style={{ width: `${(currentStep / (statusSteps.length - 1)) * 84}%` }}
+              style={{ width: `${(currentStep / (statusSteps.length - 1)) * 100}%` }}
             ></div>
             {statusSteps.map((step, index) => (
               <div key={step} className="relative z-10 flex flex-col items-center text-center">
@@ -107,9 +124,8 @@ export default function OrderDetails() {
         </div>
 
         {/* --- DETAILS GRID --- */}
-       {/* --- DETAILS GRID --- */}
         <div className="grid md:grid-cols-2 gap-8">
-          {/* SHIPPING ADDRESS SECTION - FIXED KEY MAPPING */}
+          {/* Mapping to street and pincode as per Schema */}
           <div className="bg-white p-8 rounded-[3rem] shadow-sm border border-slate-100">
             <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
               <FaMapMarkerAlt className="text-emerald-500" /> Delivery Address
@@ -117,8 +133,7 @@ export default function OrderDetails() {
             <div className="space-y-1">
               <p className="text-xl font-black text-slate-900 mb-2">{order.shippingAddress?.fullName || "Name Not Specified"}</p>
               <div className="text-slate-500 font-medium leading-relaxed">
-                {/* Check for 'street' first, fallback to 'address' if that was used previously */}
-                <p className="text-slate-800 font-bold">{order.shippingAddress?.street || order.shippingAddress?.address || "Address detail missing"}</p>
+                <p className="text-slate-800 font-bold">{order.shippingAddress?.street || "Street detail missing"}</p>
                 <p>{order.shippingAddress?.city}{order.shippingAddress?.pincode ? `, ${order.shippingAddress.pincode}` : ""}</p>
                 <div className="mt-4 pt-4 border-t border-slate-50 flex items-center gap-2 text-slate-900 font-bold">
                   <FaPhoneAlt className="text-emerald-500 size-3" /> {order.shippingAddress?.phone || "Phone not provided"}
@@ -135,34 +150,36 @@ export default function OrderDetails() {
                 <span className="font-black text-slate-800 uppercase tracking-tighter">{order.paymentMethod}</span>
               </div>
               <div className={`p-4 rounded-2xl border ${order.isPaid ? "bg-emerald-50/50 border-emerald-100 text-emerald-700" : "bg-red-50/50 border-red-100 text-red-600"} font-black text-sm text-center`}>
-                {order.isPaid ? `PAID AT ${new Date(order.paidAt).toLocaleTimeString()}` : "PAYMENT PENDING"}
+                {order.isPaid ? `PAID ON ${new Date(order.paidAt).toLocaleDateString()}` : "PAYMENT PENDING"}
               </div>
             </div>
           </div>
         </div>
 
-        {/* --- CART ITEMS --- */}
+        {/* --- ITEMS --- */}
         <div className="bg-white p-10 rounded-[3.5rem] shadow-sm border border-slate-100">
           <div className="divide-y divide-slate-50">
             {order.items.map((item, idx) => (
-              <div key={idx} className="py-6 flex justify-between items-center">
+              <div key={idx} className="py-6 flex justify-between items-center group">
                 <div className="flex items-center gap-6">
-                  <img 
-                    src={item.image?.startsWith("http") ? item.image : `${import.meta.env.VITE_API_BASE_URL}${item.image}`}
-                    alt={item.name} className="w-16 h-16 object-contain bg-slate-50 rounded-xl"
-                  />
+                  <div className="w-16 h-16 bg-slate-50 rounded-xl overflow-hidden p-2 border border-slate-100">
+                    <img 
+                      src={item.image?.startsWith("http") ? item.image : `${import.meta.env.VITE_API_BASE_URL}${item.image}`}
+                      alt={item.name} className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500"
+                    />
+                  </div>
                   <div>
                     <p className="font-black text-slate-900">{item.name}</p>
-                    <p className="text-xs font-bold text-slate-400">{item.quantity} × ₹{item.price}</p>
+                    <p className="text-xs font-bold text-slate-400">{item.quantity} × <span className="text-emerald-600">₹{item.price}</span></p>
                   </div>
                 </div>
-                <p className="font-black text-slate-900">₹{item.quantity * item.price}</p>
+                <p className="font-black text-slate-900 tracking-tighter text-lg">₹{item.quantity * item.price}</p>
               </div>
             ))}
           </div>
-          <div className="mt-8 bg-slate-900 text-white p-8 rounded-[2.5rem] flex justify-between items-center">
-            <span className="text-emerald-400 font-black text-2xl">Total</span>
-            <span className="text-3xl font-black">₹{order.totalAmount.toFixed(2)}</span>
+          <div className="mt-8 bg-slate-900 text-white p-8 rounded-[2.5rem] flex justify-between items-center shadow-2xl shadow-slate-200">
+            <span className="text-emerald-400 font-black text-2xl tracking-tighter">Total</span>
+            <span className="text-3xl font-black tracking-tighter">₹{order.totalAmount.toFixed(2)}</span>
           </div>
         </div>
       </div>
@@ -176,19 +193,22 @@ export default function OrderDetails() {
               <button onClick={() => setShowInvoice(false)} className="p-3 bg-slate-100 hover:bg-red-100 text-slate-600 rounded-full transition-colors"><FaTimes size={14}/></button>
             </div>
             <div className="p-12">
-              <div className="flex justify-between mb-10">
-                <div>
-                  <div className="flex items-center gap-2 text-emerald-600 mb-1"><FaLeaf size={20}/><span className="text-xl font-black text-slate-900">PACHA.CART</span></div>
-                  <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Official Tax Invoice</p>
-                </div>
-                <div className="text-right"><p className="text-xs font-black text-slate-900 uppercase">Inv-#{order._id.slice(-6).toUpperCase()}</p></div>
-              </div>
-              <div className="grid grid-cols-2 gap-8 mb-8 pb-8 border-b border-slate-100">
-                <div className="text-xs"><p className="font-black text-emerald-600 uppercase mb-2">Customer</p><p className="font-black text-slate-800">{order.shippingAddress?.fullName}</p><p className="text-slate-500">{order.shippingAddress?.street}</p></div>
-                <div className="text-right text-xs"><p className="font-black text-emerald-600 uppercase mb-2">Order Date</p><p className="font-black text-slate-800">{new Date(order.createdAt).toLocaleDateString()}</p></div>
-              </div>
+             <div className="flex justify-between items-start mb-10">
+          <div>
+            <img 
+              src={logo} 
+              alt="Pacha.Cart Logo" 
+              className="h-25 w-auto mb-2 object-contain"
+            />
+            <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Official Tax Invoice</p>
+          </div>
+          <div className="text-right">
+            <p className="text-xs font-black text-slate-900 uppercase tracking-tighter">Order #{order._id.slice(-6).toUpperCase()}</p>
+            <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">{order.paymentMethod}</p>
+          </div>
+        </div>
               <table className="w-full mb-8 text-xs">
-                <thead className="text-slate-400 uppercase font-black border-b border-slate-50"><tr className="text-left"><th className="pb-3">Item</th><th className="pb-3 text-center">Qty</th><th className="pb-3 text-right">Total</th></tr></thead>
+                <thead className="text-slate-400 uppercase font-black border-b border-slate-50"><tr className="text-left"><th className="pb-3">Product</th><th className="pb-3 text-center">Qty</th><th className="pb-3 text-right">Total</th></tr></thead>
                 <tbody className="divide-y divide-slate-50">
                   {order.items.map((item, i) => (
                     <tr key={i}><td className="py-3 font-bold text-slate-800">{item.name}</td><td className="py-3 text-center text-slate-500">{item.quantity}</td><td className="py-3 text-right font-black">₹{item.quantity * item.price}</td></tr>
@@ -196,7 +216,7 @@ export default function OrderDetails() {
                 </tbody>
               </table>
               <div className="bg-slate-50 p-6 rounded-2xl flex justify-between items-center"><p className="text-[10px] font-black text-slate-400 uppercase">Grand Total</p><p className="text-2xl font-black text-slate-900">₹{order.totalAmount.toFixed(2)}</p></div>
-              <p className="text-center text-[8px] font-black text-slate-300 uppercase tracking-[0.4em] mt-10">Premium Organic Groceries</p>
+              <p className="text-center text-[8px] font-black text-slate-300 uppercase tracking-[0.4em] mt-10">Premium Automated Groceries</p>
             </div>
           </div>
         </div>
