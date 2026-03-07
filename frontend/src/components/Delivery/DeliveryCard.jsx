@@ -9,8 +9,17 @@ const DeliveryCard = ({ order, onRefresh }) => {
     try {
       setIsUpdating(true);
       // Ensure you're sending the right status string to match your backend logic
-      await axios.put(`/api/orders/${order._id}/status`, { status: newStatus });
-      
+const userInfo = JSON.parse(localStorage.getItem("userInfo"));
+
+await axios.put(
+  `/api/orders/${order._id}/status`,
+  { status: newStatus },
+  {
+    headers: {
+      Authorization: `Bearer ${userInfo.token}`
+    }
+  }
+);      
       toast.success(`Order ${newStatus}!`);
       
       // Trigger a refresh in the parent component
@@ -52,14 +61,14 @@ const DeliveryCard = ({ order, onRefresh }) => {
         {order.orderStatus === 'assigned' && (
           <button 
             disabled={isUpdating}
-            onClick={() => updateStatus('picked up')} 
+            onClick={() => updateStatus('picked_up')} 
             className="w-full bg-emerald-500 hover:bg-emerald-400 text-black py-4 rounded-2xl font-black uppercase tracking-widest text-xs transition-all active:scale-95 disabled:opacity-50"
           >
             {isUpdating ? 'Processing...' : 'Confirm Pickup'}
           </button>
         )}
         
-        {order.orderStatus === 'picked up' && (
+        {order.orderStatus === 'picked_up' && (
           <button 
             disabled={isUpdating}
             onClick={() => updateStatus('delivered')} 

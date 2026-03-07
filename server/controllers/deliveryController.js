@@ -5,8 +5,9 @@ const User = require("../models/User");
 // @route   GET /api/delivery/my-orders
 // @access  Private/Delivery
 const getMyDeliveries = async (req, res) => {
-  const orders = await Order.find({ deliveryPartner: req.user._id })
-    .sort({ createdAt: -1 });
+const orders = await Order.find({ deliveryPartner: req.user._id })
+  .populate("user", "name email")
+  .sort({ createdAt: -1 });    
   res.json(orders);
 };
 
@@ -118,7 +119,7 @@ const assignPartnerToOrder = async (req, res) => {
 
   if (order) {
     order.deliveryPartner = req.body.partnerId;
-    order.orderStatus = 'Assigned'; // Moves it to the rider's dashboard
+    order.orderStatus = 'assigned'; // Moves it to the rider's dashboard
     order.assignedAt = Date.now();  // Track assignment time for logistics analytics
 
     const updatedOrder = await order.save();
@@ -140,10 +141,43 @@ const getMarketplaceOrders = async (req, res) => {
   // Find orders that are 'placed' but have no rider assigned yet
   const orders = await Order.find({ 
     orderStatus: 'placed', 
-    deliveryPartner: { $exists: false } // or null
+deliveryPartner: { $in: [null, undefined] }
   }).sort({ createdAt: -1 });
   
   res.json(orders);
+};
+
+// controllers/deliveryController.js
+import User from '../models/userModel.js';
+
+// @desc    Update delivery partner profile
+// @route   PUT /api/delivery/profile
+// @access  Private
+export const updateDeliveryProfile = async (req, res) => {
+  const user = await User.findById(req.user._id);
+
+  if (user) {
+    // Update fields or keep existing ones
+    user.phone = req.body.phone || user.phone;
+    user.vehicleNumber = req.body.vehicleNumber || user.vehicleNumber;
+
+    const updatedUser = await user.save();
+
+    // Return the updated user info (including the token)
+    res.json({
+      _id: updatedUser._id,
+      name: updatedUser.name,
+      email: updatedUser.email,
+      phone: updatedUser.phone,
+      vehicleNumber: updatedUser.vehicleNumber,
+      isAdmin: updatedUser.isAdmin,
+      isDeliveryPartner: updatedUser.isDeliveryPartner,
+      token: req.headers.authorization.split(' ')[1], // Return the same token
+    });
+  } else {
+    res.status(404);
+    throw new Error('User not found');
+  }
 };
 module.exports = { 
   getMyDeliveries, 
@@ -152,5 +186,7 @@ module.exports = {
   toggleAvailability,
   registerPartner,
   assignPartnerToOrder,
-  getMarketplaceOrders
+  getMarketplaceOrders,
+  updateDeliveryProfile
+
 };

@@ -1,5 +1,6 @@
 import React from 'react';
 import { History, UserCircle, LogOut, Package, Zap, X } from 'lucide-react';
+import { useNavigate } from "react-router-dom";
 
 const DeliverySidebar = ({ 
   activeTab, 
@@ -9,15 +10,18 @@ const DeliverySidebar = ({
   isOpen,         
   onClose         
 }) => {
+
+  const navigate = useNavigate();
+
   const menuItems = [
-    { id: 'dashboard', label: 'Active Tasks', icon: <Package size={20} /> },
-    { id: 'history', label: 'Past Deliveries', icon: <History size={20} /> },
-    { id: 'profile', label: 'My Profile', icon: <UserCircle size={20} /> },
+    { id: 'dashboard', label: 'Active Tasks', path: "/delivery/dashboard", icon: <Package size={20} /> },
+    { id: 'history', label: 'Past Deliveries', path: "/delivery/history", icon: <History size={20} /> },
+    { id: 'profile', label: 'My Profile', path: "/delivery/profile", icon: <UserCircle size={20} /> },
   ];
 
   return (
     <>
-      {/* 1. BACKDROP - Improved Visibility Logic */}
+      {/* BACKDROP */}
       <div 
         className={`fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[150] transition-all duration-300 lg:hidden ${
           isOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
@@ -25,7 +29,7 @@ const DeliverySidebar = ({
         onClick={onClose}
       />
 
-      {/* 2. SIDEBAR PANEL - Fixed 'Not Going Back' by removing forced lg:translate-x-0 */}
+      {/* SIDEBAR */}
       <aside className={`fixed top-0 left-0 h-full w-72 bg-white border-r border-slate-100 z-[200] p-6 flex flex-col transform transition-transform duration-300 ease-in-out ${
         isOpen ? "translate-x-0" : "-translate-x-full"
       }`}>
@@ -52,7 +56,8 @@ const DeliverySidebar = ({
               key={item.id}
               onClick={() => {
                 setActiveTab(item.id);
-                onClose(); // Closes on click for better UX
+                navigate(item.path);   // ✅ route navigation
+                onClose();
               }}
               className={`flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all duration-300 group ${
                 activeTab === item.id 
@@ -84,10 +89,6 @@ const DeliverySidebar = ({
           </div>
         </div>
 
-        <button onClick={handleLogout} className="flex items-center gap-4 px-4 py-4 rounded-2xl text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all duration-300">
-          <LogOut size={20} />
-          <span className="text-xs font-black uppercase tracking-widest">Sign Out</span>
-        </button>
       </aside>
     </>
   );

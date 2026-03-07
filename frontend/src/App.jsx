@@ -97,10 +97,10 @@ const [isDeliverySidebarOpen, setIsDeliverySidebarOpen] = useState(false);
 
         {/* Delivery Routes Wrapped in Layout */}
         <Route path="/delivery" element={<DeliveryLayout />}>
-          <Route index element={<DeliveryDashboard />} /> {/* /delivery */}
-          <Route path="history" element={<DeliveryHistory />} /> {/* /delivery/history */}
-          <Route path="profile" element={<DeliveryProfile />} /> {/* /delivery/profile */}
-        </Route>
+  <Route path="dashboard" element={<DeliveryDashboard />} />
+  <Route path="history" element={<DeliveryHistory />} />
+  <Route path="profile" element={<DeliveryProfile />} />
+</Route>
 
         <Route path="/admin/products" element={<ManageProducts />} />
         <Route path="/admin/orders" element={<ManageOrders/>} />
