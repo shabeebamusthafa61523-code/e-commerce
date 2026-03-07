@@ -1,16 +1,7 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { useParams, useNavigate } from "react-router-dom";
-import { FaCheck, FaLeaf, FaTimes, FaDownload, FaPrint, FaArrowLeft } from "react-icons/fa";
-import { 
-  FaCheck, 
-  FaLeaf, 
-  FaTimes, 
-  FaPrint, 
-  FaArrowLeft, 
-  FaPhoneAlt, 
-  FaMapMarkerAlt 
-} from "react-icons/fa";
+import { FaCheck, FaLeaf, FaTimes, FaDownload, FaPrint, FaArrowLeft, FaPhoneAlt, FaMapMarkerAlt  } from "react-icons/fa";
 
 export default function OrderDetails() {
   const { id } = useParams();
