@@ -6,8 +6,9 @@ const API_URL = `${import.meta.env.VITE_API_BASE_URL}/api/products`;
 /* ================= FETCH ================= */
 export const fetchProducts = createAsyncThunk(
   "product/fetchProducts",
-  async () => {
-    const { data } = await axios.get(API_URL);
+  async (params) => {
+    // If params has search, URL becomes /api/products?search=apple
+    const { data } = await axios.get(API_URL, { params }); 
     return data;
   }
 );

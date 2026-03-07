@@ -28,8 +28,9 @@ export default function ManageOrders() {
   const handleStatusChange = async (orderId, newStatus) => {
     try {
       const userInfo = JSON.parse(localStorage.getItem("userInfo"));
+      // FIX: Use VITE_API_BASE_URL instead of localhost
       await axios.put(
-        `http://localhost:5000/api/admin/${orderId}/status`,
+        `${import.meta.env.VITE_API_BASE_URL}/api/admin/${orderId}/status`,
         { status: newStatus },
         { headers: { Authorization: `Bearer ${userInfo?.token}` } }
       );
@@ -53,13 +54,13 @@ export default function ManageOrders() {
       <AdminSidebar />
       <div className="flex-1 p-8 md:p-12 overflow-y-auto">
         <div className="mb-12">
-          <span className="text-green-600 font-black text-xs uppercase tracking-[0.3em] mb-2 block">Logistics</span>
+          <span className="text-emerald-600 font-black text-xs uppercase tracking-[0.3em] mb-2 block">Logistics</span>
           <h1 className="text-4xl font-black text-slate-900 tracking-tight">Order Fulfilment</h1>
         </div>
 
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20">
-            <div className="w-12 h-12 border-4 border-slate-200 border-t-green-600 rounded-full animate-spin mb-4"></div>
+            <div className="w-12 h-12 border-4 border-slate-200 border-t-emerald-600 rounded-full animate-spin mb-4"></div>
             <p className="text-slate-400 font-black uppercase text-xs tracking-widest">Loading Logistics...</p>
           </div>
         ) : (
@@ -79,7 +80,7 @@ export default function ManageOrders() {
                   </div>
                   <div className="text-right">
                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Revenue</span>
-                    <p className="text-2xl font-black text-green-600 tracking-tighter">₹{order.totalAmount.toFixed(2)}</p>
+                    <p className="text-2xl font-black text-emerald-600 tracking-tighter">₹{order.totalAmount.toFixed(2)}</p>
                   </div>
                 </div>
 
@@ -87,15 +88,16 @@ export default function ManageOrders() {
                   {order.items.map((item, idx) => (
                     <div key={idx} className="flex items-center justify-between bg-slate-50/30 p-4 rounded-2xl border border-slate-50">
                       <div className="flex items-center gap-4">
-                       <img 
-  src={
-    item.image 
-      ? `${import.meta.env.VITE_API_BASE_URL}${item.image}` 
-      : "https://placehold.co/150"
-  } 
-  alt={item.name} 
-  className="w-14 h-14 object-cover rounded-xl" 
-/>
+                        <img 
+                          src={
+                            item.image?.startsWith("http") 
+                              ? item.image 
+                              : `${import.meta.env.VITE_API_BASE_URL}${item.image}`
+                          } 
+                          alt={item.name} 
+                          className="w-14 h-14 object-contain bg-white p-1 rounded-xl border border-slate-100" 
+                          onError={(e) => { e.target.src = "https://placehold.co/150?text=No+Image"; }}
+                        />
                         <div>
                           <h4 className="font-bold text-slate-800 text-sm">{item.name}</h4>
                           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
@@ -116,7 +118,7 @@ export default function ManageOrders() {
                     <select
                       value={order.orderStatus}
                       onChange={(e) => handleStatusChange(order._id, e.target.value)}
-                      className="bg-slate-900 text-white px-4 py-2 rounded-xl text-xs font-black outline-none cursor-pointer"
+                      className="bg-slate-900 text-white px-4 py-2 rounded-xl text-xs font-black outline-none cursor-pointer focus:ring-2 focus:ring-emerald-500 transition-all"
                     >
                       <option value="processing">Processing</option>
                       <option value="shipped">Shipped</option>

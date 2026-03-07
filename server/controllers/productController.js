@@ -1,18 +1,28 @@
 const Product = require("../models/Product");
 
 // GET all products
+// GET all products (with Search and Category filtering)
 const getProducts = async (req, res) => {
   try {
-    const { category } = req.query;
+    const { category, search } = req.query;
     let filter = {};
-    
+
+    // 1. Filter by Category (if provided)
     if (category) {
       filter.category = { $regex: new RegExp(`^${category}$`, "i") };
     }
 
-    // Since Cloudinary URLs are stored as full strings in the DB, 
-    // we don't need the 'host' or 'protocol' logic anymore.
-    let products = await Product.find(filter).lean();
+    // 2. Filter by Search Keyword (if provided)
+    if (search) {
+      filter.$or = [
+        { name: { $regex: search, $options: "i" } },
+        { brand: { $regex: search, $options: "i" } },
+        { description: { $regex: search, $options: "i" } } // Optional: search in description too
+      ];
+    }
+
+    // Lean for better performance since we are just reading data
+    const products = await Product.find(filter).sort({ createdAt: -1 }).lean();
 
     res.json(products);
   } catch (error) {
