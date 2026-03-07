@@ -107,23 +107,35 @@ export default function OrderDetails() {
         </div>
 
         {/* --- DETAILS GRID --- */}
+       {/* --- DETAILS GRID --- */}
         <div className="grid md:grid-cols-2 gap-8">
+          {/* SHIPPING ADDRESS SECTION - FIXED KEY MAPPING */}
           <div className="bg-white p-8 rounded-[3rem] shadow-sm border border-slate-100">
-            <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6">📍 Delivery Address</h2>
-            <p className="text-xl font-black text-slate-900 mb-2">{order.shippingAddress?.fullName}</p>
-            <p className="text-slate-500 font-medium leading-relaxed">
-              {order.shippingAddress?.street || order.shippingAddress?.address}<br />
-              {order.shippingAddress?.city}, {order.shippingAddress?.pincode}
-            </p>
-            <p className="mt-4 font-bold text-slate-800">📞 {order.shippingAddress?.phone}</p>
+            <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+              <FaMapMarkerAlt className="text-emerald-500" /> Delivery Address
+            </h2>
+            <div className="space-y-1">
+              <p className="text-xl font-black text-slate-900 mb-2">{order.shippingAddress?.fullName || "Name Not Specified"}</p>
+              <div className="text-slate-500 font-medium leading-relaxed">
+                {/* Check for 'street' first, fallback to 'address' if that was used previously */}
+                <p className="text-slate-800 font-bold">{order.shippingAddress?.street || order.shippingAddress?.address || "Address detail missing"}</p>
+                <p>{order.shippingAddress?.city}{order.shippingAddress?.pincode ? `, ${order.shippingAddress.pincode}` : ""}</p>
+                <div className="mt-4 pt-4 border-t border-slate-50 flex items-center gap-2 text-slate-900 font-bold">
+                  <FaPhoneAlt className="text-emerald-500 size-3" /> {order.shippingAddress?.phone || "Phone not provided"}
+                </div>
+              </div>
+            </div>
           </div>
 
           <div className="bg-white p-8 rounded-[3rem] shadow-sm border border-slate-100">
             <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6">💳 Billing Summary</h2>
             <div className="space-y-4">
-              <div className="flex justify-between text-sm"><span className="text-slate-400 font-bold uppercase">Method</span><span className="font-black text-slate-800">{order.paymentMethod}</span></div>
-              <div className={`p-4 rounded-2xl border ${order.isPaid ? "bg-emerald-50/50 border-emerald-100 text-emerald-700" : "bg-red-50/50 border-red-100 text-red-600"} font-black text-sm`}>
-                {order.isPaid ? `Paid on ${new Date(order.paidAt).toLocaleDateString()}` : "Payment Pending"}
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-400 font-bold uppercase tracking-widest">Method</span>
+                <span className="font-black text-slate-800 uppercase tracking-tighter">{order.paymentMethod}</span>
+              </div>
+              <div className={`p-4 rounded-2xl border ${order.isPaid ? "bg-emerald-50/50 border-emerald-100 text-emerald-700" : "bg-red-50/50 border-red-100 text-red-600"} font-black text-sm text-center`}>
+                {order.isPaid ? `PAID AT ${new Date(order.paidAt).toLocaleTimeString()}` : "PAYMENT PENDING"}
               </div>
             </div>
           </div>
