@@ -6,7 +6,8 @@ const {
   getAvailablePartners ,
   toggleAvailability,
   registerPartner,
-  assignPartnerToOrder
+  assignPartnerToOrder,
+  getMarketplaceOrders
 
 } = require("../controllers/deliveryController");
 const { protect, admin, delivery } = require("../middleware/authMiddleware");
@@ -19,5 +20,5 @@ router.route("/:id/toggle").put(protect, admin, toggleAvailability);
 // Admin Specific (to manage partners)
 router.get("/partners/available", protect, admin, getAvailablePartners);
 router.get("/partners/assign", protect, admin, assignPartnerToOrder);
-
+router.get("/marketplace", protect, getMarketplaceOrders);
 module.exports = router;

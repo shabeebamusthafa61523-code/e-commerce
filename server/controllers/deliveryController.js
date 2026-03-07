@@ -13,12 +13,18 @@ const getMyDeliveries = async (req, res) => {
 // @desc    Update delivery partner availability (Online/Offline)
 // @route   PUT /api/delivery/availability
 // @access  Private/Delivery
+// backend/controllers/deliveryController.js
 const updateAvailability = async (req, res) => {
   const user = await User.findById(req.user._id);
   if (user) {
     user.isAvailable = req.body.isAvailable;
-    await user.save();
-    res.json({ message: `Status updated to ${user.isAvailable ? 'Online' : 'Offline'}` });
+    const updatedUser = await user.save();
+    res.json({
+      _id: updatedUser._id,
+      name: updatedUser.name,
+      isAvailable: updatedUser.isAvailable,
+      // ... other fields
+    });
   } else {
     res.status(404).json({ message: "User not found" });
   }
@@ -116,10 +122,28 @@ const assignPartnerToOrder = async (req, res) => {
     order.assignedAt = Date.now();  // Track assignment time for logistics analytics
 
     const updatedOrder = await order.save();
+    // Add this after order.save()
+if (req.io) {
+  req.io.to(req.body.partnerId).emit("NEW_DELIVERY_ASSIGNED", {
+    orderId: updatedOrder._id,
+    address: updatedOrder.shippingAddress.street
+  });
+}
     res.json(updatedOrder);
   } else {
     res.status(404).json({ message: "Order not found" });
   }
+};
+// @desc    Get all orders available for pickup (Marketplace)
+// @route   GET /api/delivery/marketplace
+const getMarketplaceOrders = async (req, res) => {
+  // Find orders that are 'placed' but have no rider assigned yet
+  const orders = await Order.find({ 
+    orderStatus: 'placed', 
+    deliveryPartner: { $exists: false } // or null
+  }).sort({ createdAt: -1 });
+  
+  res.json(orders);
 };
 module.exports = { 
   getMyDeliveries, 
@@ -127,5 +151,6 @@ module.exports = {
   getAvailablePartners ,
   toggleAvailability,
   registerPartner,
-  assignPartnerToOrder
+  assignPartnerToOrder,
+  getMarketplaceOrders
 };

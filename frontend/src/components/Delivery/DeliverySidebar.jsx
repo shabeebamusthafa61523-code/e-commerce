@@ -1,7 +1,14 @@
 import React from 'react';
-import { LayoutDashboard, History, UserCircle, LogOut, Package } from 'lucide-react'; // Using Lucide for clean icons
+import { History, UserCircle, LogOut, Package, Zap, X } from 'lucide-react';
 
-const DeliverySidebar = ({ activeTab, setActiveTab, handleLogout }) => {
+const DeliverySidebar = ({ 
+  activeTab, 
+  setActiveTab, 
+  handleLogout, 
+  isOnline = true,
+  isOpen,         
+  onClose         
+}) => {
   const menuItems = [
     { id: 'dashboard', label: 'Active Tasks', icon: <Package size={20} /> },
     { id: 'history', label: 'Past Deliveries', icon: <History size={20} /> },
@@ -9,42 +16,81 @@ const DeliverySidebar = ({ activeTab, setActiveTab, handleLogout }) => {
   ];
 
   return (
-    <div className="fixed left-0 top-0 h-screen w-64 bg-black/40 backdrop-blur-xl border-r border-white/10 flex flex-col p-6 text-white transition-all">
-      {/* Brand Logo */}
-      <div className="flex items-center gap-3 mb-10 px-2">
-        <div className="bg-emerald-500 p-2 rounded-xl shadow-lg shadow-emerald-500/20">
-          <Package className="text-white" size={24} />
+    <>
+      {/* 1. BACKDROP - Improved Visibility Logic */}
+      <div 
+        className={`fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[150] transition-all duration-300 lg:hidden ${
+          isOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+        }`}
+        onClick={onClose}
+      />
+
+      {/* 2. SIDEBAR PANEL - Fixed 'Not Going Back' by removing forced lg:translate-x-0 */}
+      <aside className={`fixed top-0 left-0 h-full w-72 bg-white border-r border-slate-100 z-[200] p-6 flex flex-col transform transition-transform duration-300 ease-in-out ${
+        isOpen ? "translate-x-0" : "-translate-x-full"
+      }`}>
+        
+        <button onClick={onClose} className="absolute right-4 top-6 text-slate-400 hover:text-red-500 lg:hidden">
+          <X size={20}/>
+        </button>
+
+        <div className="mb-12 px-2">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center text-white font-black text-xl shadow-lg shadow-emerald-100">
+              P
+            </div>
+            <div>
+              <h2 className="font-black text-slate-900 leading-none tracking-tight text-lg">PACHA.CART</h2>
+              <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mt-1">Logistics Core</p>
+            </div>
+          </div>
         </div>
-        <span className="text-xl font-bold tracking-tight">Pacha.Cart <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full uppercase ml-1">Rider</span></span>
-      </div>
 
-      {/* Navigation Links */}
-      <nav className="flex-1 space-y-2">
-        {menuItems.map((item) => (
-          <button
-            key={item.id}
-            onClick={() => setActiveTab(item.id)}
-            className={`w-full flex items-center gap-4 px-4 py-3 rounded-2xl transition-all duration-300 ${
-              activeTab === item.id 
-              ? 'bg-gradient-to-r from-emerald-600/80 to-teal-500/80 shadow-lg shadow-emerald-900/20 text-white' 
-              : 'text-gray-400 hover:bg-white/5 hover:text-white'
-            }`}
-          >
-            {item.icon}
-            <span className="font-medium">{item.label}</span>
-          </button>
-        ))}
-      </nav>
+        <nav className="flex-1 flex flex-col gap-2">
+          {menuItems.map((item) => (
+            <button
+              key={item.id}
+              onClick={() => {
+                setActiveTab(item.id);
+                onClose(); // Closes on click for better UX
+              }}
+              className={`flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all duration-300 group ${
+                activeTab === item.id 
+                ? 'bg-slate-900 text-white shadow-xl shadow-slate-200' 
+                : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
+              }`}
+            >
+              <span className={`${activeTab === item.id ? 'opacity-100' : 'opacity-50 group-hover:opacity-100'}`}>
+                {item.icon}
+              </span>
+              <span className="text-xs font-black uppercase tracking-widest">{item.label}</span>
+            </button>
+          ))}
+        </nav>
 
-      {/* Logout Button */}
-      <button 
-        onClick={handleLogout}
-        className="flex items-center gap-4 px-4 py-3 rounded-2xl text-red-400 hover:bg-red-500/10 transition-all mt-auto"
-      >
-        <LogOut size={20} />
-        <span className="font-medium">Logout</span>
-      </button>
-    </div>
+        <div className="mb-4 p-4 bg-slate-50 border border-slate-100 rounded-2xl">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Duty Status</span>
+            <div className={`size-2 rounded-full ${isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`} />
+          </div>
+          <div className="flex items-center gap-3">
+            <div className={`size-9 rounded-lg flex items-center justify-center ${isOnline ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600'}`}>
+              <Zap size={16} fill="currentColor" />
+            </div>
+            <div>
+              <p className="text-xs font-bold text-slate-900">{isOnline ? 'Online' : 'Offline'}</p>
+              <p className="text-[9px] text-slate-500 font-bold uppercase">Ready for pings</p>
+            </div>
+          </div>
+        </div>
+
+        <button onClick={handleLogout} className="flex items-center gap-4 px-4 py-4 rounded-2xl text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all duration-300">
+          <LogOut size={20} />
+          <span className="text-xs font-black uppercase tracking-widest">Sign Out</span>
+        </button>
+      </aside>
+    </>
   );
 };
+
 export default DeliverySidebar;

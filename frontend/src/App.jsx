@@ -37,13 +37,20 @@ import DeliveryDashboard from "./pages/delivery/DeliveryDashboard";
 import DeliveryHistory from "./components/Delivery/DeliveryHistory";
 import DeliveryProfile from "./components/Delivery/DeliveryProfile";
 import DeliveryManagement from "./pages/admin/DeliveryManagement";
+import DeliverySidebar from "./components/Delivery/DeliverySidebar";
+import PartnerList from "./pages/delivery/PartnerList";
 
 function App() {
   const [isAdminSidebarOpen, setIsAdminSidebarOpen] = useState(false);
+const [isDeliverySidebarOpen, setIsDeliverySidebarOpen] = useState(false);
 
   const toggleAdminSidebar = () => {
     setIsAdminSidebarOpen((prev) => !prev);
   };
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const closeDeliverySidebar = () => {
+  setIsDeliverySidebarOpen(false);
+};
   const DeliveryRoute = ({ children }) => {
   const { userInfo } = useSelector((state) => state.userLogin);
   return userInfo && userInfo.role === 'delivery' ? children : <Navigate to="/login" />;
@@ -57,13 +64,22 @@ function App() {
           <Navbar 
             onToggleAdminSidebar={toggleAdminSidebar} 
             isAdminSidebarOpen={isAdminSidebarOpen} 
-          />
           
+      // This opens it
+      onToggleDeliverySidebar={() => setIsDeliverySidebarOpen(!isDeliverySidebarOpen)} 
+      isDeliverySidebarOpen={isDeliverySidebarOpen}
+    />
           <AdminSidebar 
             isOpen={isAdminSidebarOpen} 
             onClose={() => setIsAdminSidebarOpen(false)} 
           />
-
+<DeliverySidebar 
+        isOpen={isDeliverySidebarOpen} 
+        onClose={() => setIsDeliverySidebarOpen(false)} 
+        activeTab={activeTab}         // <--- This was missing
+        setActiveTab={setActiveTab}   // <--- This was missing
+        // // handleLogout={handleLogout}
+      />
 <main className="flex-grow mt-[88px] md:mt-[112px]">
         <Routes>
         {/* Public Routes */}
@@ -75,6 +91,9 @@ function App() {
         <Route path="/about" element={<About />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="/help" element={<Help />} />
+        <Route path="/delivery/dashboard" element={<DeliveryDashboard />} />
+
+
 
         {/* Delivery Routes Wrapped in Layout */}
         <Route path="/delivery" element={<DeliveryLayout />}>
@@ -87,7 +106,7 @@ function App() {
         <Route path="/admin/orders" element={<ManageOrders/>} />
         <Route path="/admin/users" element={<AdminUsers/>} />
         <Route path="/admin/inquiries" element={<ManageInquiries/>} />
-        <Route path="/admin/delivery" element={<DeliveryAssign/>} />
+        <Route path="/admin/delivery" element={<PartnerList/>} />
         <Route path="/admin/deliverymanage" element={<DeliveryManagement/>} />
         <Route path="/product/:id" element={<ProductDetails/>} />
         <Route path="/order/:id" element={<OrderDetails/>} />

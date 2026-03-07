@@ -1,70 +1,52 @@
-import React, { useEffect } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import { fetchMyDeliveries, updateOrderStatus } from '../../features/delivery/DeliverySlice';
-import { toast } from 'react-hot-toast';
+import React, { useState } from 'react';
+import { Package, MapPin, Navigation, Clock } from 'lucide-react';
 
 const DeliveryDashboard = () => {
-  const dispatch = useDispatch();
-  const { myOrders = [], loading } = useSelector((state) => state.delivery || {});
-  const { userInfo } = useSelector((state) => state.userLogin);
-
-  useEffect(() => {
-    dispatch(fetchMyDeliveries());
-  }, [dispatch]);
-
-  const handleStatusUpdate = (orderId, currentStatus) => {
-    const nextStatus = currentStatus === 'Assigned' ? 'Picked Up' : 'Delivered';
-    dispatch(updateOrderStatus({ orderId, status: nextStatus }))
-      .then(() => toast.success(`Order marked as ${nextStatus}`));
-  };
+  const [subTab, setSubTab] = useState('marketplace'); // 'marketplace' or 'tasks'
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white p-6">
-      <header className="mb-8">
-        <h1 className="text-3xl font-bold">Rider: {userInfo?.name}</h1>
-        <p className="text-gray-400">Current Assignments</p>
+    <div className="p-6 md:p-10 min-h-screen bg-slate-50">
+      <header className="mb-10">
+        <h1 className="text-4xl font-black text-slate-900 uppercase italic tracking-tighter">
+          Rider Terminal<span className="text-emerald-500">.</span>
+        </h1>
+        <p className="text-slate-500 font-bold text-xs uppercase tracking-widest mt-2">Pacha.Cart Logistics Division</p>
       </header>
 
-      {loading ? (
-        <div className="animate-pulse text-emerald-500">Loading your route...</div>
-      ) : (
-        <div className="space-y-6">
-          {myOrders.length === 0 ? (
-            <div className="p-10 border border-dashed border-white/10 rounded-3xl text-center text-gray-500">
-              No active deliveries right now.
-            </div>
-          ) : (
-            myOrders.map((order) => (
-              <div key={order._id} className="bg-white/5 border border-white/10 rounded-[32px] p-6 backdrop-blur-md">
-                <div className="flex justify-between items-start mb-4">
-                  <div>
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-400">Order ID: {order._id.slice(-6)}</span>
-                    <h3 className="text-xl font-bold">{order.shippingAddress.city}</h3>
-                    <p className="text-sm text-gray-400">{order.shippingAddress.address}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-bold text-emerald-400">₹{order.totalAmount}</p>
-                    <p className="text-xs text-gray-500">{order.orderStatus}</p>
-                  </div>
-                </div>
+      {/* Internal Sub-Navigation */}
+      <div className="flex gap-2 mb-8 bg-slate-200/50 p-1 rounded-2xl w-fit">
+        <button 
+          onClick={() => setSubTab('marketplace')}
+          className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
+            subTab === 'marketplace' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          Marketplace (0)
+        </button>
+        <button 
+          onClick={() => setSubTab('tasks')}
+          className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
+            subTab === 'tasks' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          My Tasks (0)
+        </button>
+      </div>
 
-                <button 
-                  onClick={() => handleStatusUpdate(order._id, order.orderStatus)}
-                  disabled={order.orderStatus === 'Delivered'}
-                  className={`w-full py-4 rounded-2xl font-bold transition-all active:scale-95 ${
-                    order.orderStatus === 'Delivered' 
-                    ? 'bg-gray-800 text-gray-500' 
-                    : 'bg-emerald-500 hover:bg-emerald-600 text-white'
-                  }`}
-                >
-                  {order.orderStatus === 'Assigned' ? 'Confirm Pickup' : 
-                   order.orderStatus === 'Picked Up' ? 'Mark as Delivered' : 'Completed'}
-                </button>
-              </div>
-            ))
-          )}
+      {/* Dynamic Content Area */}
+      <div className="border-2 border-dashed border-slate-200 rounded-[2rem] min-h-[400px] flex flex-col items-center justify-center p-12 text-center">
+        <div className="bg-slate-200/50 p-6 rounded-full mb-6">
+          <Package className="text-slate-400 size-10 animate-bounce" />
         </div>
-      )}
+        <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">
+          {subTab === 'marketplace' ? 'No orders in marketplace' : 'No active tasks assigned'}
+        </h3>
+        <p className="text-slate-500 text-sm font-medium mt-2 max-w-xs">
+          {subTab === 'marketplace' 
+            ? 'Waiting for new pings from the Logistics Core. Keep your duty status active.' 
+            : 'When you accept an order from the marketplace, it will appear here.'}
+        </p>
+      </div>
     </div>
   );
 };

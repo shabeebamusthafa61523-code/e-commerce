@@ -55,11 +55,17 @@ export default function Checkout() {
 
   const handlePlaceOrder = async () => {
     if (!defaultAddress) return alert("Please add a delivery address");
-
+const selectedAddress = {
+    fullName: defaultAddress.fullName,
+    phone: defaultAddress.phone,
+    street: defaultAddress.street,
+    city: defaultAddress.city,
+    pincode: defaultAddress.pincode
+  };
     if (paymentMethod === "razorpay") {
-      await handleRazorpayPayment(defaultAddress);
+      await handleRazorpayPayment(selectedAddress);
     } else {
-      await handleCODOrder(defaultAddress);
+      await handleCODOrder(selectedAddress);
     }
   };
 
@@ -70,7 +76,7 @@ export default function Checkout() {
       await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/orders`, {
         items: cart.map(i => ({ product: i._id, quantity: i.quantity })),
         totalAmount: total,
-        address,
+shippingAddress: address,
         paymentMethod: "COD",
       }, { headers: { Authorization: `Bearer ${userInfo.token}` } });
 
@@ -99,7 +105,7 @@ export default function Checkout() {
   try {
     await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/orders`, { // Added /api/orders
       ...res, 
-      address, 
+shippingAddress: address,
       paymentMethod: "Razorpay",
       totalAmount: total,
       items: cart.map(i => ({ product: i._id, quantity: i.quantity }))

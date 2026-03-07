@@ -25,4 +25,17 @@ router.get("/low-stock", protect, admin, getLowStockProducts);
 // PUT /api/orders/:id/status
 router.put("/:id/status", protect, admin, updateOrderStatus);
 router.get("/stats", getDashboardStats);
+
+// routes/adminRoutes.js
+router.post("/partners/add", async (req, res) => {
+  const { name, email, phone, password, vehicleNumber, city } = req.body;
+  // Hash password before saving!
+  const partner = await DeliveryPartner.create({ name, email, phone, password, vehicleNumber, city });
+  res.status(201).json(partner);
+});
+
+router.get("/partners/list", async (req, res) => {
+  const partners = await DeliveryPartner.find({});
+  res.json(partners);
+});
 module.exports = router;

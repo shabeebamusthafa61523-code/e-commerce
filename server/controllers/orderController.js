@@ -40,8 +40,9 @@ const createOrder = async (req, res) => {
         };
       })
     );
-
+console.log("DEBUG: Received shippingAddress from frontend:", shippingAddress);
     const order = await Order.create({
+      
       user: req.user._id,
       items: orderItems,
       shippingAddress,
@@ -102,7 +103,7 @@ const getOrderById = async (req, res) => {
   if (!order) {
     return res.status(404).json({ message: "Order not found" });
   }
-
+console.log("BACKEND LOG:", order.shippingAddress);
   res.json(order);
 };
 
@@ -122,6 +123,27 @@ const updateOrderToPaid = async (req, res) => {
   res.json({ message: "Payment successful" });
 };
 
+// backend/controllers/orderController.js
 
+const claimOrder = async (req, res) => {
+  const order = await Order.findById(req.params.id);
 
-module.exports = { createOrder, getUserOrders, cancelOrder, getOrderById, updateOrderToPaid };
+  if (!order) {
+    return res.status(404).json({ message: "Order not found" });
+  }
+
+  // CRITICAL: Check if someone else already took it
+  if (order.deliveryPartner) {
+    return res.status(400).json({ message: "Order already claimed by another rider" });
+  }
+
+  // Assign to the rider making the request
+  order.deliveryPartner = req.user._id;
+  order.orderStatus = 'Assigned'; // or 'picked up' depending on your flow
+  order.assignedAt = Date.now();
+
+  const updatedOrder = await order.save();
+  res.json(updatedOrder);
+};
+
+module.exports = { createOrder, getUserOrders, cancelOrder, getOrderById, updateOrderToPaid ,claimOrder};

@@ -31,13 +31,13 @@ enum: [
       ],
             default: "processing" 
     },
-   shippingAddress: {
-  fullName: String,
-  phone: String,
-  street: String,
-  city: String,
-  pincode: String,
-},
+ shippingAddress: {
+    fullName: { type: String },
+    phone: { type: String },
+    street: { type: String },
+    city: { type: String },
+    pincode: { type: String }
+  },
 paymentMethod: {
   type: String,
   required: true,

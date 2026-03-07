@@ -29,20 +29,31 @@ export default function OrderDetails() {
     "delivered"
   ];
 
-  const fetchOrder = async () => {
-    try {
-      const userInfo = JSON.parse(localStorage.getItem("userInfo"));
-      const { data } = await axios.get(
-        `${import.meta.env.VITE_API_BASE_URL}/api/orders/${id}`,
-        { headers: { Authorization: `Bearer ${userInfo?.token}` } }
-      );
-      setOrder(data);
-    } catch (error) {
-      console.error("Failed to fetch order:", error);
-    } finally {
-      setLoading(false);
+ const fetchOrder = async () => {
+  try {
+    const userInfo = JSON.parse(localStorage.getItem("userInfo"));
+    const { data } = await axios.get(
+      `${import.meta.env.VITE_API_BASE_URL}/api/orders/${id}`,
+      { headers: { Authorization: `Bearer ${userInfo?.token}` } }
+    );
+
+    // --- DEBUG LOGS ---
+    console.log("1. Raw Data from API:", data);
+    console.log("2. Keys available in data:", Object.keys(data));
+    if (data.shippingAddress) {
+      console.log("3. shippingAddress found:", data.shippingAddress);
+    } else {
+      console.warn("3. shippingAddress is MISSING from the API response");
     }
-  };
+    // ------------------
+
+    setOrder(data);
+  } catch (error) {
+    console.error("Failed to fetch order:", error);
+  } finally {
+    setLoading(false);
+  }
+};
 
   useEffect(() => {
     fetchOrder();
@@ -62,7 +73,7 @@ export default function OrderDetails() {
   );
 
   const currentStep = statusSteps.indexOf(order.orderStatus);
-
+console.log("Full Address Object:", order.shippingAddress);
   return (
     <div className="min-h-screen bg-slate-50 py-24 px-6 font-sans">
       <div className="max-w-5xl mx-auto space-y-8">
@@ -126,21 +137,33 @@ export default function OrderDetails() {
         {/* --- DETAILS GRID --- */}
         <div className="grid md:grid-cols-2 gap-8">
           {/* Mapping to street and pincode as per Schema */}
-          <div className="bg-white p-8 rounded-[3rem] shadow-sm border border-slate-100">
-            <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
-              <FaMapMarkerAlt className="text-emerald-500" /> Delivery Address
-            </h2>
-            <div className="space-y-1">
-              <p className="text-xl font-black text-slate-900 mb-2">{order.shippingAddress?.fullName || "Name Not Specified"}</p>
-              <div className="text-slate-500 font-medium leading-relaxed">
-                <p className="text-slate-800 font-bold">{order.shippingAddress?.street || "Street detail missing"}</p>
-                <p>{order.shippingAddress?.city}{order.shippingAddress?.pincode ? `, ${order.shippingAddress.pincode}` : ""}</p>
-                <div className="mt-4 pt-4 border-t border-slate-50 flex items-center gap-2 text-slate-900 font-bold">
-                  <FaPhoneAlt className="text-emerald-500 size-3" /> {order.shippingAddress?.phone || "Phone not provided"}
-                </div>
-              </div>
-            </div>
-          </div>
+          {/* --- UPDATED ADDRESS SECTION --- */}
+<div className="bg-white p-8 rounded-[3rem] shadow-sm border border-slate-100">
+  <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+    <FaMapMarkerAlt className="text-emerald-500" /> Delivery Address
+  </h2>
+  
+  {order.shippingAddress?.fullName ? (
+    <div className="space-y-1">
+      <p className="text-xl font-black text-slate-900 mb-2">
+        {order.shippingAddress.fullName}
+      </p>
+      <div className="text-slate-500 font-medium leading-relaxed">
+        <p className="text-slate-800 font-bold">{order.shippingAddress.street}</p>
+        <p>{order.shippingAddress.city}, {order.shippingAddress.pincode}</p>
+        
+        <div className="mt-4 pt-4 border-t border-slate-50 flex items-center gap-2 text-slate-900 font-bold">
+          <FaPhoneAlt className="text-emerald-500 size-3" /> 
+          {order.shippingAddress.phone}
+        </div>
+      </div>
+    </div>
+  ) : (
+    <div className="py-4 text-center">
+      <p className="text-slate-400 font-bold text-sm italic">Address details unavailable for this order</p>
+    </div>
+  )}
+</div>
 
           <div className="bg-white p-8 rounded-[3rem] shadow-sm border border-slate-100">
             <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6">💳 Billing Summary</h2>

@@ -112,6 +112,7 @@ const updateOrderStatus = async (req, res) => {
   res.json({ message: "Order status updated" });
 };
 
+
 module.exports = {
   getAllUsers,
   getDashboardStats,
