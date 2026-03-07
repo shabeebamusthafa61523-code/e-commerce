@@ -5,29 +5,35 @@ const User = require("../models/User");
 // @route   GET /api/delivery/my-orders
 // @access  Private/Delivery
 const getMyDeliveries = async (req, res) => {
-const orders = await Order.find({ deliveryPartner: req.user._id })
-  .populate("user", "name email")
-  .sort({ createdAt: -1 });    
-  res.json(orders);
+  try {
+    const orders = await Order.find({ deliveryPartner: req.user._id })
+      .populate("user", "name email")
+      .sort({ createdAt: -1 });
+    res.json(orders);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
 };
 
 // @desc    Update delivery partner availability (Online/Offline)
 // @route   PUT /api/delivery/availability
 // @access  Private/Delivery
-// backend/controllers/deliveryController.js
 const updateAvailability = async (req, res) => {
-  const user = await User.findById(req.user._id);
-  if (user) {
-    user.isAvailable = req.body.isAvailable;
-    const updatedUser = await user.save();
-    res.json({
-      _id: updatedUser._id,
-      name: updatedUser.name,
-      isAvailable: updatedUser.isAvailable,
-      // ... other fields
-    });
-  } else {
-    res.status(404).json({ message: "User not found" });
+  try {
+    const user = await User.findById(req.user._id);
+    if (user) {
+      user.isAvailable = req.body.isAvailable;
+      const updatedUser = await user.save();
+      res.json({
+        _id: updatedUser._id,
+        name: updatedUser.name,
+        isAvailable: updatedUser.isAvailable,
+      });
+    } else {
+      res.status(404).json({ message: "User not found" });
+    }
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -35,12 +41,16 @@ const updateAvailability = async (req, res) => {
 // @route   GET /api/delivery/partners/available
 // @access  Private/Admin
 const getAvailablePartners = async (req, res) => {
-  const partners = await User.find({ role: "delivery", isAvailable: true })
-    .select("-password");
-  res.json(partners);
+  try {
+    const partners = await User.find({ role: "delivery", isAvailable: true })
+      .select("-password");
+    res.json(partners);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
 };
-// controllers/deliveryController.js
-// @desc    Toggle delivery partner availability
+
+// @desc    Toggle delivery partner availability (Admin control)
 // @route   PUT /api/delivery/:id/toggle
 // @access  Private/Admin
 const toggleAvailability = async (req, res) => {
@@ -48,21 +58,19 @@ const toggleAvailability = async (req, res) => {
     const user = await User.findById(req.params.id);
 
     if (user && user.role === "delivery") {
-      // Set to the value sent from the frontend toggle
+      // Logic Check: Prevent going offline if there are active deliveries
+      const activeOrders = await Order.countDocuments({
+        deliveryPartner: req.params.id,
+        orderStatus: { $in: ['assigned', 'picked up', 'out for delivery'] }
+      });
+
+      if (activeOrders > 0 && req.body.isAvailable === false) {
+        return res.status(400).json({
+          message: `Cannot go offline. Partner has ${activeOrders} active deliveries.`
+        });
+      }
+
       user.isAvailable = req.body.isAvailable;
-      // controllers/deliveryController.js
-  const activeOrders = await Order.countDocuments({ 
-    deliveryPartner: req.params.id, 
-    orderStatus: { $in: ['assigned', 'picked up', 'out for delivery'] } 
-  });
-
-  if (activeOrders > 0 && req.body.isAvailable === false) {
-    return res.status(400).json({ 
-      message: `Cannot go offline. Partner has ${activeOrders} active deliveries.` 
-    });
-  }
-
-
       const updatedUser = await user.save();
       res.json({
         _id: updatedUser._id,
@@ -77,116 +85,126 @@ const toggleAvailability = async (req, res) => {
   }
 };
 
-
 // @desc    Register a new delivery partner
 // @route   POST /api/delivery/register
 // @access  Private/Admin
 const registerPartner = async (req, res) => {
-  const { name, email, password } = req.body;
+  try {
+    const { name, email, password } = req.body;
+    const userExists = await User.findOne({ email });
 
-  const userExists = await User.findOne({ email });
+    if (userExists) {
+      return res.status(400).json({ message: "User already exists" });
+    }
 
-  if (userExists) {
-    return res.status(400).json({ message: "User already exists" });
-  }
-
-  // Create the user with the 'delivery' role
-  const user = await User.create({
-    name,
-    email,
-    password, // Your User model should have a middleware to hash this!
-    role: "delivery",
-    isAvailable: false, // Start as offline by default
-  });
-
-  if (user) {
-    res.status(201).json({
-      _id: user._id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      isAvailable: user.isAvailable,
+    const user = await User.create({
+      name,
+      email,
+      password, // Password hashing should be handled in User Model Middleware
+      role: "delivery",
+      isAvailable: false,
     });
-  } else {
-    res.status(400).json({ message: "Invalid user data" });
+
+    if (user) {
+      res.status(201).json({
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        isAvailable: user.isAvailable,
+      });
+    } else {
+      res.status(400).json({ message: "Invalid user data" });
+    }
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 };
+
 // @desc    Assign partner to order
 // @route   PUT /api/orders/:id/assign
 // @access  Private/Admin
 const assignPartnerToOrder = async (req, res) => {
-  const order = await Order.findById(req.params.id);
+  try {
+    const order = await Order.findById(req.params.id);
 
-  if (order) {
-    order.deliveryPartner = req.body.partnerId;
-    order.orderStatus = 'assigned'; // Moves it to the rider's dashboard
-    order.assignedAt = Date.now();  // Track assignment time for logistics analytics
+    if (order) {
+      order.deliveryPartner = req.body.partnerId;
+      order.orderStatus = 'assigned';
+      order.assignedAt = Date.now();
 
-    const updatedOrder = await order.save();
-    // Add this after order.save()
-if (req.io) {
-  req.io.to(req.body.partnerId).emit("NEW_DELIVERY_ASSIGNED", {
-    orderId: updatedOrder._id,
-    address: updatedOrder.shippingAddress.street
-  });
-}
-    res.json(updatedOrder);
-  } else {
-    res.status(404).json({ message: "Order not found" });
+      const updatedOrder = await order.save();
+
+      // Socket.io integration for real-time alerts
+      if (req.io) {
+        req.io.to(req.body.partnerId).emit("NEW_DELIVERY_ASSIGNED", {
+          orderId: updatedOrder._id,
+          address: updatedOrder.shippingAddress?.street || "No Address Provided"
+        });
+      }
+      res.json(updatedOrder);
+    } else {
+      res.status(404).json({ message: "Order not found" });
+    }
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 };
+
 // @desc    Get all orders available for pickup (Marketplace)
 // @route   GET /api/delivery/marketplace
 const getMarketplaceOrders = async (req, res) => {
-  // Find orders that are 'placed' but have no rider assigned yet
-  const orders = await Order.find({ 
-    orderStatus: 'placed', 
-deliveryPartner: { $in: [null, undefined] }
-  }).sort({ createdAt: -1 });
-  
-  res.json(orders);
-};
+  try {
+    const orders = await Order.find({
+      orderStatus: 'placed',
+      deliveryPartner: { $exists: false } // Checks for null or undefined
+    }).sort({ createdAt: -1 });
 
-// controllers/deliveryController.js
-import User from '../models/userModel.js';
-
-// @desc    Update delivery partner profile
-// @route   PUT /api/delivery/profile
-// @access  Private
-export const updateDeliveryProfile = async (req, res) => {
-  const user = await User.findById(req.user._id);
-
-  if (user) {
-    // Update fields or keep existing ones
-    user.phone = req.body.phone || user.phone;
-    user.vehicleNumber = req.body.vehicleNumber || user.vehicleNumber;
-
-    const updatedUser = await user.save();
-
-    // Return the updated user info (including the token)
-    res.json({
-      _id: updatedUser._id,
-      name: updatedUser.name,
-      email: updatedUser.email,
-      phone: updatedUser.phone,
-      vehicleNumber: updatedUser.vehicleNumber,
-      isAdmin: updatedUser.isAdmin,
-      isDeliveryPartner: updatedUser.isDeliveryPartner,
-      token: req.headers.authorization.split(' ')[1], // Return the same token
-    });
-  } else {
-    res.status(404);
-    throw new Error('User not found');
+    res.json(orders);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 };
-module.exports = { 
-  getMyDeliveries, 
-  updateAvailability, 
-  getAvailablePartners ,
+
+// @desc    Update delivery partner profile (Contact & Vehicle)
+// @route   PUT /api/delivery/profile
+// @access  Private
+const updateDeliveryProfile = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+
+    if (user) {
+      user.phone = req.body.phone || user.phone;
+      user.vehicleNumber = req.body.vehicleNumber || user.vehicleNumber;
+
+      const updatedUser = await user.save();
+
+      res.json({
+        _id: updatedUser._id,
+        name: updatedUser.name,
+        email: updatedUser.email,
+        phone: updatedUser.phone,
+        vehicleNumber: updatedUser.vehicleNumber,
+        isAdmin: updatedUser.isAdmin,
+        role: updatedUser.role,
+        token: req.headers.authorization.split(' ')[1], 
+      });
+    } else {
+      res.status(404).json({ message: 'User not found' });
+    }
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Exporting all functions using CommonJS
+module.exports = {
+  getMyDeliveries,
+  updateAvailability,
+  getAvailablePartners,
   toggleAvailability,
   registerPartner,
   assignPartnerToOrder,
   getMarketplaceOrders,
   updateDeliveryProfile
-
 };
