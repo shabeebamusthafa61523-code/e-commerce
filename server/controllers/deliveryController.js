@@ -197,11 +197,23 @@ const updateDeliveryProfile = async (req, res) => {
   }
 };
 
-// Exporting all functions using CommonJS
-module.exports = {
-  getMyDeliveries,
-  updateAvailability,
+// Add this to your deliveryController.js
+const getAllPartners = async (req, res) => {
+  try {
+    // Find all users with the role 'delivery'
+    const partners = await User.find({ role: "delivery" }).select("-password");
+    res.json(partners);
+  } catch (error) {
+    res.status(500).json({ message: "Failed to fetch fleet registry" });
+  }
+};
+
+// Update your module.exports at the bottom
+module.exports = { 
+  getMyDeliveries, 
+  updateAvailability, 
   getAvailablePartners,
+  getAllPartners, // <--- Add here
   toggleAvailability,
   registerPartner,
   assignPartnerToOrder,
