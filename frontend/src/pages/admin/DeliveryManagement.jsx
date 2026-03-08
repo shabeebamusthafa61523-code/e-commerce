@@ -1,209 +1,263 @@
 import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import AdminAssignRow from './AdminAssignRow';
-import { 
-  fetchPartners, 
-  registerPartner, 
-  assignOrder 
-} from '../../features/delivery/DeliverySlice';
+import axios from 'axios';
 import { toast } from 'react-hot-toast';
-import { FaUserPlus, FaMotorcycle, FaSignal, FaTimes, FaCircle, FaInbox } from 'react-icons/fa';
+import AdminSidebar from "../../components/admin/AdminSidebar";
+import { fetchPartners, assignOrder } from '../../features/delivery/DeliverySlice';
+import { 
+  FaBoxOpen, FaMapMarkerAlt, FaRoute, FaCheckCircle, 
+  FaChevronRight, FaPhoneAlt, FaUser, FaExternalLinkAlt 
+} from 'react-icons/fa';
 
-const DeliveryManagement = ({ orders = [] }) => {
+const DeliveryManagement = () => {
   const dispatch = useDispatch();
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [showAddForm, setShowAddForm] = useState(false);
-  
-  const [formData, setFormData] = useState({ 
-    name: '', 
-    email: '', 
-    password: 'password123', 
-    role: 'delivery' 
-  });
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [view, setView] = useState('pending'); // 'pending', 'active', or 'completed'
 
-  const { partners = [], loading } = useSelector((state) => state.delivery || {});
+  const { partners = [] } = useSelector((state) => state.delivery || {});
+
+  const fetchAllOrders = async () => {
+    try {
+      const userInfo = JSON.parse(localStorage.getItem("userInfo"));
+      const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/admin/orders`, {
+        headers: { Authorization: `Bearer ${userInfo?.token}` },
+      });
+      setOrders(data || []);
+    } catch (error) {
+      console.error("Logistics Fetch Error:", error);
+      toast.error("Failed to sync with terminal");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
+    fetchAllOrders();
     dispatch(fetchPartners());
   }, [dispatch]);
 
-  const handleAddPartner = (e) => {
-    e.preventDefault();
-    dispatch(registerPartner(formData)).then((res) => {
+  // --- FILTERS ---
+  const unassignedOrders = orders?.filter(o => 
+    !o.deliveryPartner && ['processing', 'placed'].includes(o.orderStatus)
+  ) || [];
+  
+  const activeShipments = orders?.filter(o => 
+    o.deliveryPartner && !['delivered', 'cancelled'].includes(o.orderStatus)
+  ) || [];
+
+  const completedOrders = orders?.filter(o => 
+    o.orderStatus === 'delivered'
+  ) || [];
+
+  const handleAssign = (orderId, partnerId) => {
+    dispatch(assignOrder({ orderId, partnerId })).then((res) => {
       if (!res.error) {
-        toast.success(`${formData.name} added to the fleet!`, {
-          style: { background: '#10b981', color: '#fff', fontWeight: 'bold' }
-        });
-        setShowAddForm(false); 
-        setFormData({ name: '', email: '', password: 'password123', role: 'delivery' });
-      } else {
-        toast.error(res.payload || "Registration failed");
+        toast.success("Rider Dispatched Successfully");
+        fetchAllOrders();
       }
     });
   };
 
-  const handleAssign = (orderId, partnerId) => {
-    dispatch(assignOrder({ orderId, partnerId }))
-      .then((res) => {
-        if (!res.error) {
-          toast.success("Rider Dispatched Successfully", {
-            icon: '🚀',
-            style: { borderRadius: '15px', background: '#1a1a1a', color: '#fff' }
-          });
-        }
-      });
-  };
-
-  // Filter for orders that need a rider
-  const validOrders = orders?.filter(o => o.orderStatus === 'placed' && !o.deliveryPartner) || [];
-
   return (
-    <div className="p-8 bg-[#0a0a0a] min-h-screen">
-      {/* HEADER SECTION */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10">
-        <div>
-          <h2 className="text-5xl font-black text-white tracking-tighter italic">Logistics Control<span className="text-emerald-500">.</span></h2>
-          <p className="text-gray-500 font-bold mt-2 uppercase text-[10px] tracking-[0.4em]">
-            Fleet Intelligence & Real-time Routing
-          </p>
-        </div>
-        
-        <div className="flex items-center gap-6">
-          <div className="text-right hidden sm:block">
-            <p className="text-[9px] text-gray-600 uppercase font-black tracking-widest">Available Fleet</p>
-            <p className="text-2xl font-black text-white">
-              {partners.filter(p => p.isAvailable).length}<span className="text-gray-700 mx-2">/</span>{partners.length}
-            </p>
-          </div>
-          <button 
-            onClick={() => { setIsModalOpen(true); setShowAddForm(false); }}
-            className="bg-emerald-500 hover:bg-emerald-400 text-black px-10 py-5 rounded-[24px] font-black uppercase text-[11px] tracking-widest transition-all active:scale-95 shadow-[0_20px_40px_rgba(16,185,129,0.15)] flex items-center gap-3"
-          >
-            <FaUserPlus size={16} /> Manage Fleet
-          </button>
-        </div>
-      </div>
-
-      {/* ASSIGNMENT HUB */}
-      <div className="grid grid-cols-1 gap-8">
-        <div className="bg-[#111] rounded-[48px] border border-white/5 overflow-hidden shadow-3xl">
-          <div className="p-8 border-b border-white/5 bg-white/[0.01] flex justify-between items-center">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-emerald-500/10 rounded-2xl text-emerald-500">
-                <FaInbox size={20} />
-              </div>
-              <div>
-                <h3 className="font-black text-white uppercase tracking-widest text-sm">Incoming Shipments</h3>
-                <p className="text-[10px] text-gray-500 font-bold uppercase mt-1">{validOrders.length} Orders awaiting pickup</p>
-              </div>
-            </div>
+    <div className="flex min-h-screen bg-slate-50 font-sans">
+      <AdminSidebar />
+      
+      <div className="flex-1 p-8 md:p-12 overflow-y-auto">
+        {/* HEADER SECTION */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-12">
+          <div>
+            <span className="text-emerald-600 font-black text-xs uppercase tracking-[0.3em] mb-2 block">Fleet Operations</span>
+            <h1 className="text-5xl font-black text-slate-900 tracking-tighter italic uppercase">
+              Logistics <span className="text-emerald-500">Hub</span>
+            </h1>
           </div>
 
-          <div className="divide-y divide-white/5 min-h-[300px]">
-            {validOrders.length > 0 ? (
-              validOrders.map(order => (
-                <AdminAssignRow 
-                  key={order._id} 
-                  order={order} 
-                  partners={partners.filter(p => p.isAvailable)} // Only show online partners for assignment
-                  onAssign={handleAssign} 
-                />
-              ))
-            ) : (
-              <div className="py-32 text-center">
-                <div className="size-20 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <FaSignal className="text-gray-700 animate-pulse" size={24} />
-                </div>
-                <p className="text-gray-500 font-black uppercase text-[10px] tracking-widest">Frequency Clear • Scanning for Orders</p>
+          <div className="flex bg-white p-1.5 rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden">
+            {[
+              { id: 'pending', label: 'Pending', count: unassignedOrders.length, color: 'bg-slate-900' },
+              { id: 'active', label: 'Active', count: activeShipments.length, color: 'bg-emerald-500' },
+              { id: 'completed', label: 'Completed', count: completedOrders.length, color: 'bg-blue-600' }
+            ].map((tab) => (
+              <button 
+                key={tab.id}
+                onClick={() => setView(tab.id)}
+                className={`px-6 py-3 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${
+                  view === tab.id ? `${tab.color} text-white shadow-lg` : 'text-slate-400 hover:text-slate-600'
+                }`}
+              >
+                {tab.label} ({tab.count})
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-20">
+            <div className="w-12 h-12 border-4 border-slate-200 border-t-emerald-600 rounded-full animate-spin"></div>
+          </div>
+        ) : (
+          <div className="bg-white rounded-[3rem] border border-slate-100 shadow-sm overflow-hidden">
+            
+            {/* 1. PENDING VIEW */}
+            {view === 'pending' && (
+              <div className="divide-y divide-slate-50">
+                {unassignedOrders.length > 0 ? unassignedOrders.map(order => (
+                  <div key={order._id} className="p-8 hover:bg-slate-50/50 transition-all flex flex-wrap items-center justify-between gap-6">
+                    <div className="flex items-center gap-6">
+                      <div className="size-14 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-400"><FaBoxOpen size={24} /></div>
+                      <div>
+                        <p className="text-sm font-black text-slate-900">#{order._id.slice(-8).toUpperCase()}</p>
+                        <ProductManifest items={order.items} />
+                        <div className="flex items-center gap-2 mt-2 text-slate-400">
+                          <FaMapMarkerAlt size={10} />
+                          <p className="text-[10px] font-bold uppercase italic">{order.shippingAddress?.city}</p>
+                        </div>
+                      </div>
+                    </div>
+                    <select 
+                      className="bg-slate-900 text-white text-[11px] font-black px-6 py-3 rounded-xl outline-none hover:bg-emerald-600 transition-colors cursor-pointer"
+                      onChange={(e) => handleAssign(order._id, e.target.value)}
+                      defaultValue=""
+                    >
+                      <option value="" disabled>Dispatch Rider</option>
+                      {partners.filter(p => p.isAvailable).map(partner => (
+                        <option key={partner._id} value={partner._id}>{partner.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                )) : <EmptyState message="All orders dispatched" />}
+              </div>
+            )}
+
+            {/* 2. ACTIVE & COMPLETED TABLE VIEW */}
+            {(view === 'active' || view === 'completed') && (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-slate-50/50 border-b border-slate-100">
+                      <th className="px-10 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Order & Manifest</th>
+                      <th className="px-10 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Assigned Rider</th>
+                      <th className="px-10 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
+                      <th className="px-10 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Full Location</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50">
+                    {(view === 'active' ? activeShipments : completedOrders).map(order => (
+                      <tr key={order._id} className="hover:bg-slate-50/30 transition-all group">
+                        <td className="px-10 py-8">
+                          <p className="text-sm font-black text-slate-900 mb-2">#{order._id.slice(-8).toUpperCase()}</p>
+                          <ProductManifest items={order.items} />
+                        </td>
+                        
+                        <td className="px-10 py-8">
+                          <div className="flex items-center gap-3">
+                            <div className={`size-8 rounded-lg flex items-center justify-center text-[10px] font-black text-white ${view === 'completed' ? 'bg-blue-600' : 'bg-emerald-600'}`}>
+                              {order.deliveryPartner?.name?.charAt(0) || 'R'}
+                            </div>
+                            <div className="flex flex-col">
+                              <span className="text-[11px] font-black text-slate-900 uppercase">
+                                {order.deliveryPartner?.name || "Unassigned"}
+                              </span>
+                              <span className="text-[9px] font-bold text-slate-400 lowercase italic">
+                                {order.deliveryPartner?.email || "partner@pachacart.com"}
+                              </span>
+                            </div>
+                          </div>
+                        </td>
+
+                        <td className="px-10 py-8"><StatusBadge status={order.orderStatus} /></td>
+
+                        <td className="px-10 py-8">
+                          <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex flex-col gap-2 min-w-[200px]">
+                            {/* Customer & Phone */}
+                            <div className="flex items-center justify-between border-b border-slate-200 pb-2 mb-1">
+                               <div className="flex items-center gap-1.5">
+                                 <FaUser size={9} className="text-slate-400" />
+                                 <span className="text-[10px] font-black text-slate-900 uppercase truncate max-w-[100px]">
+                                   {order.shippingAddress?.fullName}
+                                 </span>
+                               </div>
+                               <div className="flex items-center gap-1 text-emerald-600">
+                                 <FaPhoneAlt size={8} />
+                                 <span className="text-[9px] font-mono font-bold tracking-tighter">
+                                   {order.shippingAddress?.phone}
+                                 </span>
+                               </div>
+                            </div>
+
+                            {/* Street & PIN */}
+                            <div className="flex items-start gap-2">
+                               <FaMapMarkerAlt size={11} className="text-emerald-500 mt-0.5" />
+                               <div className="flex flex-col">
+                                 <span className="text-[10px] font-bold text-slate-600 leading-tight uppercase">
+                                   {order.shippingAddress?.street}, {order.shippingAddress?.city}
+                                 </span>
+                                 <div className="flex items-center justify-between mt-1">
+                                    <span className="text-[8px] font-black text-slate-400 tracking-widest">
+                                      PIN: {order.shippingAddress?.pincode}
+                                    </span>
+                                    <button 
+                                      onClick={() => window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${order.shippingAddress?.street}, ${order.shippingAddress?.city}, ${order.shippingAddress?.pincode}`)}`)}
+                                      className="flex items-center gap-1 text-[8px] font-black uppercase text-blue-600 hover:text-blue-800 transition-colors"
+                                    >
+                                      Maps <FaExternalLinkAlt size={7} />
+                                    </button>
+                                 </div>
+                               </div>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {(view === 'active' ? activeShipments : completedOrders).length === 0 && (
+                  <EmptyState message={view === 'active' ? "No live deliveries" : "No completed orders yet"} />
+                )}
               </div>
             )}
           </div>
-        </div>
+        )}
       </div>
-
-      {/* MANAGEMENT MODAL */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
-          <div className="absolute inset-0 bg-black/95 backdrop-blur-2xl" onClick={() => setIsModalOpen(false)} />
-          
-          <div className="relative bg-[#0d0d0d] border border-white/10 w-full max-w-2xl rounded-[56px] shadow-3xl overflow-hidden">
-            <div className="p-12">
-              <div className="flex justify-between items-center mb-12">
-                <div>
-                  <h3 className="text-3xl font-black text-white italic uppercase tracking-tighter">
-                    {showAddForm ? 'Enlist Partner' : 'Fleet Registry'}
-                  </h3>
-                  <div className="h-1 w-12 bg-emerald-500 mt-2 rounded-full" />
-                </div>
-                <button onClick={() => setIsModalOpen(false)} className="size-12 bg-white/5 rounded-2xl flex items-center justify-center text-gray-400 hover:text-white transition-colors">
-                  <FaTimes size={20} />
-                </button>
-              </div>
-
-              {showAddForm ? (
-                <form onSubmit={handleAddPartner} className="space-y-4">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-gray-500 uppercase ml-4">Full Name</label>
-                    <input 
-                      type="text" required
-                      className="w-full bg-white/[0.03] border border-white/5 p-6 rounded-[28px] text-white outline-none focus:border-emerald-500/50 transition-all font-bold"
-                      value={formData.name}
-                      onChange={(e) => setFormData({...formData, name: e.target.value})}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-gray-500 uppercase ml-4">Email Address</label>
-                    <input 
-                      type="email" required
-                      className="w-full bg-white/[0.03] border border-white/5 p-6 rounded-[28px] text-white outline-none focus:border-emerald-500/50 transition-all font-bold"
-                      value={formData.email}
-                      onChange={(e) => setFormData({...formData, email: e.target.value})}
-                    />
-                  </div>
-                  <div className="flex gap-4 pt-10">
-                    <button type="submit" className="flex-1 bg-white text-black py-6 rounded-[30px] font-black uppercase tracking-[0.2em] text-[11px] hover:bg-emerald-500 transition-all shadow-xl shadow-white/5">Complete Onboarding</button>
-                    <button type="button" onClick={() => setShowAddForm(false)} className="px-10 py-6 rounded-[30px] border border-white/10 text-white font-black text-[11px] uppercase tracking-widest hover:bg-white/5">Cancel</button>
-                  </div>
-                </form>
-              ) : (
-                <>
-                  <div className="space-y-3 max-h-[400px] overflow-y-auto pr-4 custom-scrollbar">
-                    {partners.length > 0 ? partners.map(p => (
-                      <div key={p._id} className="flex justify-between items-center p-6 bg-white/[0.02] rounded-[32px] border border-white/5">
-                        <div className="flex items-center gap-5">
-                          <div className="relative">
-                            <div className="size-14 rounded-2xl bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center text-white font-black text-xl border border-white/5">
-                              {p.name?.charAt(0)}
-                            </div>
-                            <div className={`absolute -bottom-1 -right-1 size-4 rounded-full border-4 border-[#0d0d0d] ${p.isAvailable ? 'bg-emerald-500' : 'bg-red-500'}`} />
-                          </div>
-                          <div>
-                            <p className="text-white font-black text-lg leading-none tracking-tight">{p.name}</p>
-                            <p className="text-[9px] text-gray-600 mt-2 font-bold uppercase tracking-widest">{p.email}</p>
-                          </div>
-                        </div>
-                        <div className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest ${p.isAvailable ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'}`}>
-                          {p.isAvailable ? 'Signal Active' : 'Offline'}
-                        </div>
-                      </div>
-                    )) : (
-                      <p className="text-center py-10 text-gray-600 font-bold uppercase text-xs">No partners registered</p>
-                    )}
-                  </div>
-                  <button 
-                    onClick={() => setShowAddForm(true)}
-                    className="w-full mt-10 py-6 border-2 border-dashed border-white/10 rounded-[32px] text-gray-500 font-black hover:border-emerald-500/30 hover:text-emerald-500 transition-all uppercase tracking-[0.2em] text-[10px]"
-                  >
-                    + Enlist New Fleet Member
-                  </button>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
+
+// --- SUB-COMPONENTS ---
+
+const ProductManifest = ({ items }) => (
+  <div className="flex flex-wrap gap-2">
+    {items?.map((item, idx) => (
+      <span key={idx} className="bg-slate-50 border border-slate-100 text-slate-600 text-[9px] font-black px-2 py-1 rounded-md uppercase tracking-tighter">
+        {item.quantity}x {item.product?.name || item.name}
+      </span>
+    ))}
+  </div>
+);
+
+const StatusBadge = ({ status }) => {
+  const styles = {
+    "picked up": "bg-purple-50 text-purple-600 border-purple-100",
+    "out for delivery": "bg-amber-50 text-amber-600 border-amber-100",
+    "delivered": "bg-blue-50 text-blue-600 border-blue-100",
+    "assigned": "bg-emerald-50 text-emerald-600 border-emerald-100",
+  };
+  return (
+    <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full border ${styles[status] || 'bg-slate-50 text-slate-500'}`}>
+      <div className={`size-1.5 rounded-full bg-current ${status !== 'delivered' && 'animate-pulse'}`} />
+      <span className="text-[9px] font-black uppercase tracking-widest">{status}</span>
+    </div>
+  );
+};
+
+const EmptyState = ({ message }) => (
+  <div className="py-24 text-center">
+    <div className="size-20 bg-slate-50 rounded-[2.5rem] flex items-center justify-center mx-auto mb-6 border border-slate-100">
+      <FaRoute className="text-slate-200" size={30} />
+    </div>
+    <p className="text-slate-400 font-black uppercase text-[10px] tracking-[0.3em]">{message}</p>
+  </div>
+);
 
 export default DeliveryManagement;

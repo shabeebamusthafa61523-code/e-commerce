@@ -42,7 +42,10 @@ const getAllOrders = async (req, res) => {
     const orders = await Order.find()
       .populate("user", "name email")
       .populate("items.product", "name price")
-    .sort({ createdAt: -1 });
+      // THIS IS THE MISSING PIECE:
+      .populate("deliveryPartner", "name email phone") 
+      .sort({ createdAt: -1 });
+      
     res.status(200).json(orders);
   } catch (error) {
     console.error("Get Orders Error:", error);

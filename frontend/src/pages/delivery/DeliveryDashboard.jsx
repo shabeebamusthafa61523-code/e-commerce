@@ -4,153 +4,231 @@ import {
   fetchMarketplaceOrders,
   fetchMyOrders,
   assignOrder,
+  updateOrderStatus, // Added missing import
 } from "../../features/delivery/DeliverySlice";
-import { Package, MapPin, Clock, ArrowRight, Zap, Loader2 } from "lucide-react";
+import { 
+  Package, MapPin, ArrowRight, Zap, 
+  Loader2, ShoppingBag, Bell, DollarSign, CheckCircle, Navigation, Phone, IndianRupee 
+} from "lucide-react";
+import { toast } from "react-hot-toast";
 
 const DeliveryDashboard = () => {
   const dispatch = useDispatch();
   const [subTab, setSubTab] = useState("marketplace");
+  const [isOnline, setIsOnline] = useState(true);
 
-  const { marketplaceOrders, myOrders, loading } = useSelector(
+  const { marketplaceOrders = [], myOrders = [], loading } = useSelector(
     (state) => state.delivery
   );
-
   const { userInfo } = useSelector((state) => state.auth);
 
-  useEffect(() => {
-    dispatch(fetchMarketplaceOrders());
-    dispatch(fetchMyOrders());
-  }, [dispatch]);
+  const completedToday = myOrders.filter(o => o.orderStatus === 'delivered').length;
+  const earningsToday = myOrders
+    .filter(o => o.orderStatus === 'delivered')
+    .reduce((acc, curr) => acc + (curr.totalAmount * 0.1), 0);
 
-  const handleAccept = (orderId) => {
-    dispatch(
-      assignOrder({
-        orderId,
-        partnerId: userInfo._id,
-      })
-    );
+  useEffect(() => {
+    if (isOnline) {
+      dispatch(fetchMarketplaceOrders());
+      dispatch(fetchMyOrders());
+    }
+  }, [dispatch, isOnline]);
+
+  const handleAccept = async (orderId) => {
+    const result = await dispatch(assignOrder({ orderId, partnerId: userInfo._id }));
+    if (!result.error) {
+      toast.success("Order Claimed Successfully!");
+      setSubTab("tasks");
+    }
   };
 
-  const orders = subTab === "marketplace" ? marketplaceOrders : myOrders;
+  const getImageUrl = (item) => {
+    const path = item.product?.image || item.image;
+    if (!path) return "https://placehold.co/150?text=No+Image";
+    return path.startsWith("http") 
+      ? path 
+      : `${import.meta.env.VITE_API_BASE_URL}${path}`;
+  };
+
+  // Logic to advance the order status
+  const handleStatusUpdate = async (orderId, currentStatus) => {
+    console.log("Hitting URL:", `${import.meta.env.VITE_API_BASE_URL}/api/orders/${orderId}/status`);
+    const statusFlow = {
+      'placed': 'picked up',
+      'processing': 'picked up',
+      'picked up': 'out for delivery',
+      'out for delivery': 'delivered'
+    };
+
+    const nextStatus = statusFlow[currentStatus];
+
+    if (nextStatus) {
+      const result = await dispatch(updateOrderStatus({ orderId, status: nextStatus }));
+      if (!result.error) {
+        toast.success(`Order ${nextStatus.toUpperCase()}!`);
+        if (nextStatus === 'delivered') {
+          dispatch(fetchMyOrders());
+        }
+      }
+    }
+  };
 
   return (
-    <div className="p-6 md:p-10 min-h-screen bg-slate-50 animate-fadeIn">
-      <header className="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4">
-        <div>
-          <h1 className="text-4xl font-black text-slate-900 uppercase italic tracking-tighter">
-            Rider Terminal<span className="text-emerald-500">.</span>
-          </h1>
-          <p className="text-[10px] text-slate-400 font-black uppercase tracking-[0.3em] mt-1">
-            Logistics Control Center
-          </p>
+    <div className="p-6 md:p-10 min-h-screen bg-slate-50 font-sans text-slate-900">
+      {/* 1. STATS SECTION */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm flex items-center gap-4">
+          <div className="size-12 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-600"><DollarSign size={20} /></div>
+          <div>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Today's Earnings</p>
+            <p className="text-xl font-black text-slate-900">₹{earningsToday.toFixed(2)}</p>
+          </div>
         </div>
-        
-        {/* Status Badge */}
-        <div className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-100 rounded-2xl shadow-sm w-fit">
-          <div className="size-2 rounded-full bg-emerald-500 animate-pulse" />
-          <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">System Online</span>
+        <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm flex items-center gap-4">
+          <div className="size-12 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600"><CheckCircle size={20} /></div>
+          <div>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Completed</p>
+            <p className="text-xl font-black text-slate-900">{completedToday} Drops</p>
+          </div>
+        </div>
+        <div className={`p-6 rounded-[2rem] border transition-all flex items-center justify-between ${isOnline ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+          <div className="flex items-center gap-3">
+            <div className={`size-3 rounded-full ${isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`} />
+            <span className={`text-[10px] font-black uppercase tracking-widest ${isOnline ? 'text-white' : 'text-slate-400'}`}>
+              {isOnline ? 'System Online' : 'System Offline'}
+            </span>
+          </div>
+          <button onClick={() => setIsOnline(!isOnline)} className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase transition-all ${isOnline ? 'bg-red-500/10 text-red-400' : 'bg-emerald-500 text-white'}`}>
+            {isOnline ? 'Go Offline' : 'Go Online'}
+          </button>
+        </div>
+      </div>
+
+      {/* 2. HEADER & TABS */}
+      <header className="mb-10 flex flex-wrap items-center justify-between gap-6">
+        <h1 className="text-4xl font-black text-slate-900 uppercase italic tracking-tighter">Terminal<span className="text-emerald-500">.</span></h1>
+        <div className="flex gap-2 bg-slate-200/50 p-1.5 rounded-[22px] border border-slate-100">
+          <button onClick={() => setSubTab("marketplace")} className={`px-6 py-2.5 rounded-[18px] text-[10px] font-black uppercase tracking-widest transition-all ${subTab === "marketplace" ? "bg-white text-slate-900 shadow-md" : "text-slate-500"}`}>Market ({marketplaceOrders.length})</button>
+          <button onClick={() => setSubTab("tasks")} className={`px-6 py-2.5 rounded-[18px] text-[10px] font-black uppercase tracking-widest transition-all ${subTab === "tasks" ? "bg-white text-slate-900 shadow-md" : "text-slate-500"}`}>Tasks ({myOrders.length})</button>
         </div>
       </header>
 
-      {/* Sub Tabs Navigation */}
-      <div className="flex gap-2 mb-10 bg-slate-200/50 p-1.5 rounded-[22px] w-fit border border-slate-100">
-        <button
-          onClick={() => setSubTab("marketplace")}
-          className={`px-8 py-3 rounded-[18px] text-[10px] font-black uppercase tracking-widest transition-all ${
-            subTab === "marketplace"
-              ? "bg-white text-slate-900 shadow-md"
-              : "text-slate-500 hover:text-slate-700"
-          }`}
-        >
-          Marketplace ({marketplaceOrders.length})
-        </button>
-
-        <button
-          onClick={() => setSubTab("tasks")}
-          className={`px-8 py-3 rounded-[18px] text-[10px] font-black uppercase tracking-widest transition-all ${
-            subTab === "tasks"
-              ? "bg-white text-slate-900 shadow-md"
-              : "text-slate-500 hover:text-slate-700"
-          }`}
-        >
-          My Tasks ({myOrders.length})
-        </button>
-      </div>
-
-      {/* Main Content Area */}
+      {/* 3. ORDER GRID */}
       {loading ? (
-        <div className="flex flex-col items-center justify-center min-h-[400px]">
-          <Loader2 className="animate-spin text-emerald-500 mb-4" size={32} />
-          <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest italic">Syncing Orders...</p>
-        </div>
-      ) : (orders || []).length === 0 ? (
-        <div className="border-2 border-dashed border-slate-200 rounded-[3rem] min-h-[400px] flex flex-col items-center justify-center bg-white/50 backdrop-blur-sm transition-all hover:bg-white/80">
-          <div className="bg-slate-50 p-6 rounded-full mb-6">
-            <Package className="text-slate-200 size-12" />
-          </div>
-          <p className="text-slate-900 font-black uppercase text-sm tracking-widest">No active pings</p>
-          <p className="text-slate-400 text-[10px] font-bold uppercase mt-2 tracking-tighter">Terminal is scanning for new requests</p>
-        </div>
+        <div className="flex justify-center py-20"><Loader2 className="animate-spin text-emerald-500" /></div>
       ) : (
-        <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-8">
-          {orders.map((order) => (
-            <div
-              key={order._id}
-              className="bg-white p-8 rounded-[40px] shadow-sm border border-slate-100 hover:shadow-xl hover:shadow-slate-200/50 transition-all group"
-            >
-              <div className="flex justify-between items-start mb-6">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {(subTab === "marketplace" ? marketplaceOrders : myOrders).map((order) => (
+            <div key={order._id} className="bg-white p-6 rounded-[40px] shadow-sm border border-slate-100 hover:shadow-xl transition-all flex flex-col h-full">
+              
+              <div className="flex justify-between items-start mb-4">
+                <span className="text-[9px] font-black bg-slate-100 text-slate-500 px-3 py-1 rounded-full uppercase italic">
+                  {order.orderStatus}
+                </span>
+                <p className="font-mono font-bold text-slate-400 text-xs">#{order._id.slice(-6).toUpperCase()}</p>
+              </div>
+
+              {/* PRODUCT MANIFEST SECTION */}
+              <div className="flex-1 mb-6">
+                <div className="flex items-center gap-2 mb-3 text-slate-400">
+                  <ShoppingBag size={12} />
+                  <span className="text-[10px] font-black uppercase tracking-widest">Manifest ({order.items?.length})</span>
+                </div>
+                
+                <div className="space-y-2">
+                  {order.items?.map((item, idx) => (
+                    <div key={idx} className="flex items-center gap-3 bg-slate-50 p-2 rounded-2xl border border-slate-100">
+                      <img 
+                        src={getImageUrl(item)} 
+                        className="w-10 h-10 object-contain bg-white rounded-xl border border-slate-200 p-1"
+                        alt=""
+                      />
+                      <div className="flex-1 overflow-hidden">
+                        <p className="text-[11px] font-bold text-slate-800 truncate">
+                          {item.product?.name || item.name || "Loading..."}
+                        </p>
+                        <div className="flex justify-between items-center">
+                          <p className="text-[9px] font-black text-emerald-600 uppercase">Qty: {item.quantity}</p>
+                          <p className="text-[9px] font-bold text-slate-400 italic">₹{item.price}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* FULL ADDRESS SECTION */}
+              <div className="mb-6 bg-slate-50/50 p-4 rounded-3xl border border-slate-100">
+                <div className="flex items-center gap-2 mb-2">
+                  <MapPin size={14} className="text-emerald-500" />
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Destination</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs font-black text-slate-900">{order.shippingAddress?.fullName}</p>
+                  <p className="text-[11px] font-bold text-slate-600 leading-tight">
+                    {order.shippingAddress?.street}, {order.shippingAddress?.city}
+                  </p>
+                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter">
+                    PIN: {order.shippingAddress?.pincode} | Ph: {order.shippingAddress?.phone}
+                  </p>
+                </div>
+              </div>
+
+              {/* TOTAL PRICE BLOCK */}
+              <div className="flex items-center justify-between mb-6 px-2">
                 <div>
-                  <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full uppercase tracking-widest">
-                    Ready for pickup
-                  </span>
-                  <h3 className="font-black text-slate-900 text-xl tracking-tight mt-3">
-                    Order #{order._id.slice(-6).toUpperCase()}
-                  </h3>
+                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Payment</p>
+                  <p className="text-[10px] font-bold text-slate-900 uppercase italic">{order.paymentMethod || 'Prepaid'}</p>
                 </div>
-                <div className="size-10 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-slate-900 group-hover:text-white transition-colors">
-                  <Zap size={18} fill="currentColor" />
-                </div>
-              </div>
-
-              <div className="space-y-4 mb-8">
-                <div className="flex items-center gap-3">
-                  <div className="size-8 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400">
-                    <MapPin size={14} />
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Drop Location</p>
-                    <p className="text-sm font-bold text-slate-700 leading-tight">
-                      {order.deliveryAddress?.city || "Local Delivery"}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <div className="size-8 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400">
-                    <Clock size={14} />
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Time Assigned</p>
-                    <p className="text-sm font-bold text-slate-700">
-                      {new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </p>
-                  </div>
+                <div className="text-right">
+                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Collect Amount</p>
+                  <p className="text-xl font-black text-emerald-600 flex items-center justify-end">
+                    <IndianRupee size={16} strokeWidth={3} />
+                    {order.totalAmount?.toFixed(2)}
+                  </p>
                 </div>
               </div>
 
+              {/* ACTION BUTTONS */}
               {subTab === "marketplace" ? (
-                <button
-                  onClick={() => handleAccept(order._id)}
-                  className="w-full bg-slate-900 text-white py-5 rounded-[24px] font-black uppercase tracking-widest text-xs flex items-center justify-center gap-3 hover:bg-emerald-600 shadow-xl shadow-slate-200 transition-all active:scale-[0.98]"
+                <button 
+                  onClick={() => handleAccept(order._id)} 
+                  className="w-full bg-slate-900 text-white py-4 rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] flex items-center justify-center gap-2 hover:bg-emerald-600 transition-all shadow-lg shadow-slate-200"
                 >
-                  Accept Delivery <ArrowRight size={14} />
+                  Claim Order <ArrowRight size={14} />
                 </button>
               ) : (
-                <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Current State</span>
-                  <span className="text-xs font-black text-emerald-600 uppercase italic">
-                    {order.orderStatus}
-                  </span>
+                <div className="flex flex-col gap-2">
+                   <div className="flex gap-2">
+                      <a href={`tel:${order.shippingAddress?.phone}`} className="p-4 bg-slate-100 text-slate-900 rounded-2xl hover:bg-emerald-500 hover:text-white transition-all">
+                        <Phone size={16} />
+                      </a>
+                      <button 
+                        onClick={() => window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${order.shippingAddress?.street}, ${order.shippingAddress?.city}, ${order.shippingAddress?.pincode}`)}`)}
+                        className="flex-1 bg-slate-100 text-slate-900 rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 hover:bg-slate-200"
+                      >
+                        <Navigation size={14} /> Navigate
+                      </button>
+                   </div>
+                   
+                   {/* DYNAMIC PROGRESS BUTTON */}
+                   <button 
+                     onClick={() => handleStatusUpdate(order._id, order.orderStatus)}
+                     disabled={order.orderStatus === 'delivered'}
+                     className={`w-full py-4 rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] transition-all shadow-md ${
+                       order.orderStatus === 'delivered' 
+                       ? 'bg-emerald-100 text-emerald-600 cursor-default' 
+                       : 'bg-emerald-600 text-white hover:bg-slate-900'
+                     }`}
+                   >
+                     {order.orderStatus === 'placed' || order.orderStatus === 'processing' 
+                       ? "Confirm Pickup" 
+                       : order.orderStatus === 'picked up' 
+                       ? "Start Delivery" 
+                       : order.orderStatus === 'out for delivery' 
+                       ? "Mark as Delivered" 
+                       : "Order Completed"}
+                   </button>
                 </div>
               )}
             </div>

@@ -226,11 +226,11 @@ const Navbar = ({ onToggleAdminSidebar, isAdminSidebarOpen, onToggleDeliverySide
             {/* Dynamic links based on role */}
             {userInfo?.role === "delivery" ? (
               <>
-                <Link to="/delivery/dashboard" onClick={() => setProfileOpen(false)} className="block p-4 rounded-xl hover:bg-emerald-50 font-bold text-slate-700">
-                  🛵 Delivery Dashboard
+               <Link to="/profile" onClick={() => setProfileOpen(false)} className="block p-4 rounded-xl hover:bg-emerald-50 font-bold text-slate-700">
+                  👤 Profile Settings
                 </Link>
-                <Link to="/delivery/earnings" onClick={() => setProfileOpen(false)} className="block p-4 rounded-xl hover:bg-emerald-50 font-bold text-slate-700">
-                  💰 My Earnings
+                <Link to="/orders" onClick={() => setProfileOpen(false)} className="block p-4 rounded-xl hover:bg-emerald-50 font-bold text-slate-700">
+                  📦 My Orders
                 </Link>
               </>
             ) : (

@@ -16,12 +16,8 @@ const createOrder = async (req, res) => {
     const orderItems = await Promise.all(
       items.map(async (item) => {
         const product = await Product.findById(item.product);
+        if (!product) throw new Error("Product not found");
 
-        if (!product) {
-          throw new Error("Product not found");
-        }
-
-        // ✅ FIX: Determine if the Flash Sale price should be used
         const activePrice = product.isFlashSale && product.discountPrice > 0 
           ? product.discountPrice 
           : product.price;
@@ -31,18 +27,14 @@ const createOrder = async (req, res) => {
         return {
           product: product._id,
           name: product.name,
-          price: activePrice, // Saves the discounted price snapshot
-          image:
-            product.images && product.images.length > 0
-              ? product.images[0]
-              : "",
+          price: activePrice,
+          image: product.images?.[0] || "",
           quantity: item.quantity,
         };
       })
     );
-console.log("DEBUG: Received shippingAddress from frontend:", shippingAddress);
+
     const order = await Order.create({
-      
       user: req.user._id,
       items: orderItems,
       shippingAddress,
@@ -52,12 +44,21 @@ console.log("DEBUG: Received shippingAddress from frontend:", shippingAddress);
       orderStatus: "processing",
     });
 
+    // 🚀 BROADCAST: Notify all delivery partners
+    if (req.io) {
+      req.io.emit('new_marketplace_order', {
+        message: "New Shipment Available!",
+        orderId: order._id,
+        amount: order.totalAmount,
+        location: shippingAddress.city || "Nearby", // Helps riders decide quickly
+      });
+    }
+
     res.status(201).json(order);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
-
 // @desc Cancel an order
 // @route PUT /api/orders/:id/cancel
 const cancelOrder = async (req, res) => {
@@ -126,24 +127,41 @@ const updateOrderToPaid = async (req, res) => {
 // backend/controllers/orderController.js
 
 const claimOrder = async (req, res) => {
-  const order = await Order.findById(req.params.id);
+  try {
+    const orderId = req.params.id;
+    const partnerId = req.user._id;
 
-  if (!order) {
-    return res.status(404).json({ message: "Order not found" });
+    // ATOMIC UPDATE: Only update if deliveryPartner is still null
+    const order = await Order.findOneAndUpdate(
+      { 
+        _id: orderId, 
+        deliveryPartner: null // This is the "Lock"
+      },
+      { 
+        $set: { 
+          deliveryPartner: partnerId,
+          orderStatus: 'Assigned',
+          assignedAt: Date.now()
+        } 
+      },
+      { new: true } // Returns the updated document
+    ).populate('deliveryPartner', 'name email');
+
+    if (!order) {
+      // If no order was found with deliveryPartner: null, it means someone else got it
+      return res.status(400).json({ 
+        message: "Too late! This order has already been claimed by another rider." 
+      });
+    }
+
+    // BROADCAST: If you have Socket.io set up, notify others to remove this from their list
+    if (req.io) {
+      req.io.emit('order_claimed', { orderId: order._id });
+    }
+
+    res.json(order);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
-
-  // CRITICAL: Check if someone else already took it
-  if (order.deliveryPartner) {
-    return res.status(400).json({ message: "Order already claimed by another rider" });
-  }
-
-  // Assign to the rider making the request
-  order.deliveryPartner = req.user._id;
-  order.orderStatus = 'Assigned'; // or 'picked up' depending on your flow
-  order.assignedAt = Date.now();
-
-  const updatedOrder = await order.save();
-  res.json(updatedOrder);
 };
-
 module.exports = { createOrder, getUserOrders, cancelOrder, getOrderById, updateOrderToPaid ,claimOrder};

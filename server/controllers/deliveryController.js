@@ -126,26 +126,26 @@ const registerPartner = async (req, res) => {
 // @access  Private/Admin
 const assignPartnerToOrder = async (req, res) => {
   try {
-    const order = await Order.findById(req.params.id);
+    const { partnerId } = req.body;
+    const orderId = req.params.id;
 
-    if (order) {
-      order.deliveryPartner = req.body.partnerId;
-      order.orderStatus = 'assigned';
-      order.assignedAt = Date.now();
+    const order = await Order.findById(orderId);
 
-      const updatedOrder = await order.save();
-
-      // Socket.io integration for real-time alerts
-      if (req.io) {
-        req.io.to(req.body.partnerId).emit("NEW_DELIVERY_ASSIGNED", {
-          orderId: updatedOrder._id,
-          address: updatedOrder.shippingAddress?.street || "No Address Provided"
-        });
-      }
-      res.json(updatedOrder);
-    } else {
-      res.status(404).json({ message: "Order not found" });
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" });
     }
+
+    // Update the order with the partner and move it to processing
+    order.deliveryPartner = partnerId;
+    order.orderStatus = "processing";
+    order.assignedAt = Date.now(); // Useful for tracking delivery time later
+
+    const updatedOrder = await order.save();
+    
+    // Populate partner details if you need to show them in the UI immediately
+    const populatedOrder = await updatedOrder.populate("deliveryPartner", "name phone");
+
+    res.json(populatedOrder);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -153,19 +153,26 @@ const assignPartnerToOrder = async (req, res) => {
 
 // @desc    Get all orders available for pickup (Marketplace)
 // @route   GET /api/delivery/marketplace
+// @desc    Get all orders available for pickup (Marketplace)
+// @route   GET /api/delivery/marketplace
 const getMarketplaceOrders = async (req, res) => {
   try {
     const orders = await Order.find({
-      orderStatus: 'placed',
-      deliveryPartner: { $exists: false } // Checks for null or undefined
-    }).sort({ createdAt: -1 });
+      // FIX: Check for both 'placed' and 'processing' to be safe
+      orderStatus: { $in: ['placed', 'processing'] }, 
+      // FIX: Ensure the partner is either null, undefined, or doesn't exist
+      $or: [
+        { deliveryPartner: { $exists: false } },
+        { deliveryPartner: null }
+      ]
+    }).populate("items.product", "name price image")
+    .sort({ createdAt: -1 });
 
     res.json(orders);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
-
 // @desc    Update delivery partner profile (Contact & Vehicle)
 // @route   PUT /api/delivery/profile
 // @access  Private
@@ -208,6 +215,34 @@ const getAllPartners = async (req, res) => {
   }
 };
 
+const updateOrderStatus = async (req, res) => {
+  try {
+    const { status } = req.body;
+    const order = await Order.findById(req.params.id);
+
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    // SECURITY: Ensure the person updating is the assigned partner
+    if (order.deliveryPartner.toString() !== req.user._id.toString()) {
+      return res.status(401).json({ message: "Unauthorized: You are not assigned to this order" });
+    }
+
+    order.orderStatus = status;
+
+    // Log delivery time for earnings
+    if (status === "delivered") {
+      order.isDelivered = true;
+      order.deliveredAt = Date.now();
+    }
+
+    const updatedOrder = await order.save();
+    res.json(updatedOrder);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
 // Update your module.exports at the bottom
 module.exports = { 
   getMyDeliveries, 
@@ -218,5 +253,6 @@ module.exports = {
   registerPartner,
   assignPartnerToOrder,
   getMarketplaceOrders,
-  updateDeliveryProfile
+  updateDeliveryProfile,
+  updateOrderStatus
 };
