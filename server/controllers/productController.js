@@ -17,6 +17,7 @@ const getProducts = async (req, res) => {
       filter.$or = [
         { name: { $regex: search, $options: "i" } },
         { brand: { $regex: search, $options: "i" } },
+        { category: { $regex: search, $options: "i" } },
         { description: { $regex: search, $options: "i" } } // Optional: search in description too
       ];
     }
