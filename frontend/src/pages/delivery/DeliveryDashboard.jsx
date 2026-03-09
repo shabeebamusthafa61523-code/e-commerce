@@ -8,7 +8,7 @@ import {
 } from "../../features/delivery/DeliverySlice";
 import { 
   Package, MapPin, ArrowRight, Zap, 
-  Loader2, ShoppingBag, Bell, DollarSign, CheckCircle, Navigation, Phone, IndianRupee 
+  Loader2, ShoppingBag, Bell, FaRupeeSign, CheckCircle, Navigation, Phone, IndianRupee
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 
@@ -89,7 +89,7 @@ const DeliveryDashboard = () => {
       {/* 1. STATS SECTION */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
         <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm flex items-center gap-4">
-          <div className="size-12 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-600"><DollarSign size={20} /></div>
+          <div className="size-12 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-600"><IndianRupee size={20} /></div>
           <div>
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Today's Earnings</p>
             <p className="text-xl font-black text-slate-900">₹{earningsToday.toFixed(2)}</p>

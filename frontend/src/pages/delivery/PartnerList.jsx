@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchPartners } from '../../features/delivery/DeliverySlice';
-import { Loader2, Zap, ShieldCheck, Power, Ghost } from 'lucide-react';
+import { Loader2, Zap, ShieldCheck, Power, Ghost, FaCircle } from 'lucide-react';
 
 const PartnerList = () => {
   const dispatch = useDispatch();
@@ -9,10 +9,16 @@ const PartnerList = () => {
 
   useEffect(() => {
     dispatch(fetchPartners());
+    
+    // Auto-refresh fleet status every 30 seconds
+    const interval = setInterval(() => {
+      dispatch(fetchPartners());
+    }, 30000);
+    return () => clearInterval(interval);
   }, [dispatch]);
 
   if (loading) return (
-    <div className="flex flex-col items-center justify-center min-h-[400px] text-slate-400 bg-white rounded-[2rem]">
+    <div className="flex flex-col items-center justify-center min-h-[400px] text-slate-400 bg-white rounded-[2rem] border border-slate-100">
       <Loader2 className="animate-spin mb-4 text-emerald-500" size={32} />
       <p className="text-[10px] font-black uppercase tracking-[0.3em] italic">Syncing Fleet Status...</p>
     </div>
@@ -30,7 +36,7 @@ const PartnerList = () => {
             Real-Time Availability Tracking
           </p>
         </div>
-        <div className="px-5 py-2.5 bg-slate-900 text-white rounded-2xl">
+        <div className="px-5 py-2.5 bg-slate-900 text-white rounded-2xl shadow-lg shadow-slate-200">
           <span className="text-[10px] font-black uppercase tracking-wider">
             Total Fleet: {partners.length}
           </span>
@@ -42,41 +48,50 @@ const PartnerList = () => {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-50/50">
-                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Partner</th>
-                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Live Status</th>
+                <th className="px-10 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Partner Identity</th>
+                <th className="px-10 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Availability Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
               {partners.map((partner) => (
-                <tr key={partner._id} className="hover:bg-slate-50/50 transition-all">
-                  <td className="px-8 py-5">
-                    <div className="flex items-center gap-4">
-                      <div className={`size-11 rounded-2xl flex items-center justify-center text-white font-black text-sm transition-all ${partner.isAvailable ? 'bg-emerald-500 shadow-lg shadow-emerald-100' : 'bg-slate-200'}`}>
-                        {partner.name?.charAt(0)}
+                <tr key={partner._id} className="hover:bg-slate-50/30 transition-all group">
+                  <td className="px-10 py-6">
+                    <div className="flex items-center gap-5">
+                      {/* Avatar with dynamic ring */}
+                      <div className={`size-12 rounded-2xl flex items-center justify-center text-white font-black text-sm transition-all duration-500 ${
+                        partner.isAvailable 
+                        ? 'bg-emerald-500 shadow-xl shadow-emerald-100 ring-2 ring-emerald-100' 
+                        : 'bg-slate-200 grayscale'
+                      }`}>
+                        {partner.name?.charAt(0).toUpperCase()}
                       </div>
+                      
                       <div>
-                        <p className="text-sm font-black text-slate-900">{partner.name}</p>
-                        <div className="flex items-center gap-1 mt-0.5">
-                          <ShieldCheck size={10} className={partner.isAvailable ? 'text-emerald-500' : 'text-slate-300'} />
-                          <p className={`text-[9px] font-black uppercase tracking-tighter ${partner.isAvailable ? 'text-emerald-600' : 'text-slate-400'}`}>
-                            {partner.isAvailable ? 'Verified Dispatcher' : 'Offline'}
+                        <p className={`text-sm font-black transition-colors ${partner.isAvailable ? 'text-slate-900' : 'text-slate-400'}`}>
+                          {partner.name}
+                        </p>
+                        <div className="flex items-center gap-1.5 mt-1">
+                          <ShieldCheck size={11} className={partner.isAvailable ? 'text-emerald-500' : 'text-slate-300'} />
+                          <p className={`text-[9px] font-black uppercase tracking-widest ${partner.isAvailable ? 'text-emerald-600' : 'text-slate-400'}`}>
+                            {partner.isAvailable ? 'Ready for Dispatch' : 'Current Offline'}
                           </p>
                         </div>
                       </div>
                     </div>
                   </td>
                   
-                  <td className="px-8 py-5 text-right">
-                    {/* ONLY SHOW LIVE IF TOGGLE (isAvailable) IS TRUE */}
+                  <td className="px-10 py-6 text-right">
                     {partner.isAvailable ? (
-                      <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-600 shadow-sm animate-in fade-in slide-in-from-right-2 duration-500">
-                        <div className="size-2 rounded-full bg-emerald-500 animate-pulse" />
-                        <span className="text-[10px] font-black uppercase tracking-widest">Live Now</span>
+                      /* ACTIVE / GREEN STATUS */
+                      <div className="inline-flex items-center gap-2.5 px-5 py-2.5 rounded-2xl bg-emerald-50 border border-emerald-100 text-emerald-600 shadow-sm animate-in fade-in zoom-in duration-700">
+                        <div className="size-2 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.6)]" />
+                        <span className="text-[10px] font-black uppercase tracking-[0.2em]">Available</span>
                       </div>
                     ) : (
-                      <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-50 border border-slate-100 text-slate-400 grayscale">
-                        <Power size={12} />
-                        <span className="text-[10px] font-black uppercase tracking-widest">Stationary</span>
+                      /* INACTIVE / GREY STATUS */
+                      <div className="inline-flex items-center gap-2.5 px-5 py-2.5 rounded-2xl bg-slate-50 border border-slate-100 text-slate-400">
+                        <Power size={12} className="opacity-40" />
+                        <span className="text-[10px] font-black uppercase tracking-[0.2em]">Offline</span>
                       </div>
                     )}
                   </td>
@@ -86,8 +101,10 @@ const PartnerList = () => {
           </table>
         ) : (
           <div className="py-24 text-center">
-            <Ghost className="mx-auto mb-4 text-slate-200" size={48} />
-            <p className="text-slate-400 font-black text-[10px] uppercase tracking-[0.3em]">No partners registered in fleet</p>
+            <div className="size-20 bg-slate-50 rounded-[2.5rem] flex items-center justify-center mx-auto mb-6 border border-slate-100">
+              <Ghost className="text-slate-200" size={32} />
+            </div>
+            <p className="text-slate-400 font-black text-[10px] uppercase tracking-[0.3em]">Zero Fleet Records Found</p>
           </div>
         )}
       </div>

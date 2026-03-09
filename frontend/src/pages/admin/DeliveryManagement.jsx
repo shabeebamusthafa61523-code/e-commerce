@@ -6,14 +6,14 @@ import AdminSidebar from "../../components/admin/AdminSidebar";
 import { fetchPartners, assignOrder } from '../../features/delivery/DeliverySlice';
 import { 
   FaBoxOpen, FaMapMarkerAlt, FaRoute, FaCheckCircle, 
-  FaChevronRight, FaPhoneAlt, FaUser, FaExternalLinkAlt 
+  FaChevronRight, FaPhoneAlt, FaUser, FaExternalLinkAlt, FaCircle 
 } from 'react-icons/fa';
 
 const DeliveryManagement = () => {
   const dispatch = useDispatch();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [view, setView] = useState('pending'); // 'pending', 'active', or 'completed'
+  const [view, setView] = useState('pending');
 
   const { partners = [] } = useSelector((state) => state.delivery || {});
 
@@ -25,7 +25,6 @@ const DeliveryManagement = () => {
       });
       setOrders(data || []);
     } catch (error) {
-      console.error("Logistics Fetch Error:", error);
       toast.error("Failed to sync with terminal");
     } finally {
       setLoading(false);
@@ -35,7 +34,34 @@ const DeliveryManagement = () => {
   useEffect(() => {
     fetchAllOrders();
     dispatch(fetchPartners());
+    
+    // Optional: Refresh data every 30 seconds to see partner updates automatically
+    const interval = setInterval(fetchAllOrders, 30000);
+    return () => clearInterval(interval);
   }, [dispatch]);
+
+  // --- OPTIMISTIC DISPATCH (NO REFRESH) ---
+  const handleAssign = (orderId, partnerId) => {
+    const selectedPartner = partners.find(p => p._id === partnerId);
+    
+    // Instant UI update: Remove from pending list locally
+    setOrders(prevOrders => 
+      prevOrders.map(order => 
+        order._id === orderId 
+          ? { ...order, deliveryPartner: selectedPartner, orderStatus: 'assigned' } 
+          : order
+      )
+    );
+
+    dispatch(assignOrder({ orderId, partnerId })).then((res) => {
+      if (!res.error) {
+        toast.success(`Rider ${selectedPartner?.name} Dispatched`);
+      } else {
+        fetchAllOrders(); // Rollback on error
+        toast.error("Dispatch failed");
+      }
+    });
+  };
 
   // --- FILTERS ---
   const unassignedOrders = orders?.filter(o => 
@@ -50,14 +76,8 @@ const DeliveryManagement = () => {
     o.orderStatus === 'delivered'
   ) || [];
 
-  const handleAssign = (orderId, partnerId) => {
-    dispatch(assignOrder({ orderId, partnerId })).then((res) => {
-      if (!res.error) {
-        toast.success("Rider Dispatched Successfully");
-        fetchAllOrders();
-      }
-    });
-  };
+  // Logic: Show ONLY online partners in the dispatch dropdown
+  const onlinePartners = partners.filter(p => p.isOnline);
 
   return (
     <div className="flex min-h-screen bg-slate-50 font-sans">
@@ -115,14 +135,17 @@ const DeliveryManagement = () => {
                         </div>
                       </div>
                     </div>
+
                     <select 
                       className="bg-slate-900 text-white text-[11px] font-black px-6 py-3 rounded-xl outline-none hover:bg-emerald-600 transition-colors cursor-pointer"
                       onChange={(e) => handleAssign(order._id, e.target.value)}
                       defaultValue=""
                     >
-                      <option value="" disabled>Dispatch Rider</option>
-                      {partners.filter(p => p.isAvailable).map(partner => (
-                        <option key={partner._id} value={partner._id}>{partner.name}</option>
+                      <option value="" disabled>Dispatch Rider ({onlinePartners.length} Online)</option>
+                      {onlinePartners.map(partner => (
+                        <option key={partner._id} value={partner._id}>
+                          🟢 {partner.name}
+                        </option>
                       ))}
                     </select>
                   </div>
@@ -130,7 +153,7 @@ const DeliveryManagement = () => {
               </div>
             )}
 
-            {/* 2. ACTIVE & COMPLETED TABLE VIEW */}
+            {/* 2. ACTIVE & COMPLETED VIEW */}
             {(view === 'active' || view === 'completed') && (
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
@@ -138,7 +161,7 @@ const DeliveryManagement = () => {
                     <tr className="bg-slate-50/50 border-b border-slate-100">
                       <th className="px-10 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Order & Manifest</th>
                       <th className="px-10 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Assigned Rider</th>
-                      <th className="px-10 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
+                      <th className="px-10 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Live Status</th>
                       <th className="px-10 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Full Location</th>
                     </tr>
                   </thead>
@@ -159,18 +182,22 @@ const DeliveryManagement = () => {
                               <span className="text-[11px] font-black text-slate-900 uppercase">
                                 {order.deliveryPartner?.name || "Unassigned"}
                               </span>
-                              <span className="text-[9px] font-bold text-slate-400 lowercase italic">
-                                {order.deliveryPartner?.email || "partner@pachacart.com"}
-                              </span>
+                              {order.deliveryPartner?.isOnline && (
+                                <span className="text-[8px] text-emerald-500 font-bold flex items-center gap-1">
+                                  <FaCircle size={6} className="animate-pulse" /> ONLINE
+                                </span>
+                              )}
                             </div>
                           </div>
                         </td>
 
-                        <td className="px-10 py-8"><StatusBadge status={order.orderStatus} /></td>
+                        <td className="px-10 py-8">
+                          {/* VIEW ONLY: Partner updates this from their app */}
+                          <StatusBadge status={order.orderStatus} />
+                        </td>
 
                         <td className="px-10 py-8">
                           <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex flex-col gap-2 min-w-[200px]">
-                            {/* Customer & Phone */}
                             <div className="flex items-center justify-between border-b border-slate-200 pb-2 mb-1">
                                <div className="flex items-center gap-1.5">
                                  <FaUser size={9} className="text-slate-400" />
@@ -185,8 +212,6 @@ const DeliveryManagement = () => {
                                  </span>
                                </div>
                             </div>
-
-                            {/* Street & PIN */}
                             <div className="flex items-start gap-2">
                                <FaMapMarkerAlt size={11} className="text-emerald-500 mt-0.5" />
                                <div className="flex flex-col">
@@ -201,7 +226,7 @@ const DeliveryManagement = () => {
                                       onClick={() => window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${order.shippingAddress?.street}, ${order.shippingAddress?.city}, ${order.shippingAddress?.pincode}`)}`)}
                                       className="flex items-center gap-1 text-[8px] font-black uppercase text-blue-600 hover:text-blue-800 transition-colors"
                                     >
-                                      Maps <FaExternalLinkAlt size={7} />
+                                      Track <FaExternalLinkAlt size={7} />
                                     </button>
                                  </div>
                                </div>
@@ -212,9 +237,6 @@ const DeliveryManagement = () => {
                     ))}
                   </tbody>
                 </table>
-                {(view === 'active' ? activeShipments : completedOrders).length === 0 && (
-                  <EmptyState message={view === 'active' ? "No live deliveries" : "No completed orders yet"} />
-                )}
               </div>
             )}
           </div>
@@ -242,10 +264,11 @@ const StatusBadge = ({ status }) => {
     "out for delivery": "bg-amber-50 text-amber-600 border-amber-100",
     "delivered": "bg-blue-50 text-blue-600 border-blue-100",
     "assigned": "bg-emerald-50 text-emerald-600 border-emerald-100",
+    "placed": "bg-slate-50 text-slate-400 border-slate-100",
   };
   return (
     <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full border ${styles[status] || 'bg-slate-50 text-slate-500'}`}>
-      <div className={`size-1.5 rounded-full bg-current ${status !== 'delivered' && 'animate-pulse'}`} />
+      <div className={`size-1.5 rounded-full bg-current ${status !== 'delivered' && status !== 'placed' && 'animate-pulse'}`} />
       <span className="text-[9px] font-black uppercase tracking-widest">{status}</span>
     </div>
   );
