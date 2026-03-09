@@ -90,37 +90,53 @@ const toggleAvailability = async (req, res) => {
 // @access  Private/Admin
 const registerPartner = async (req, res) => {
   try {
-    const { name, email, password } = req.body;
-    const userExists = await User.findOne({ email });
+    // Destructure the extra fields from your frontend modal
+    const { name, email, phone, password, vehicleNumber, city } = req.body;
+
+    // 1. Check if user already exists via Email OR Phone
+    const userExists = await User.findOne({ 
+      $or: [{ email }, { phone }] 
+    });
 
     if (userExists) {
-      return res.status(400).json({ message: "User already exists" });
+      return res.status(400).json({ 
+        message: "A partner with this email or phone already exists." 
+      });
     }
 
+    // 2. Create the partner in the database
+    // Ensure your User Model Schema includes phone, vehicleNumber, and city
     const user = await User.create({
       name,
       email,
-      password, // Password hashing should be handled in User Model Middleware
-      role: "delivery",
+      phone,
+      password, // Hashing happens in your User Model Middleware (.pre('save'))
+      vehicleNumber,
+      city,
+      role: "delivery", // Hardcoded for this controller
       isAvailable: false,
     });
 
     if (user) {
+      // Return the new partner details to update your React list instantly
       res.status(201).json({
         _id: user._id,
         name: user.name,
         email: user.email,
+        phone: user.phone,
+        vehicleNumber: user.vehicleNumber,
+        city: user.city,
         role: user.role,
         isAvailable: user.isAvailable,
       });
     } else {
-      res.status(400).json({ message: "Invalid user data" });
+      res.status(400).json({ message: "Invalid partner data received." });
     }
   } catch (error) {
+    // Catch Mongoose validation errors (e.g., missing required fields)
     res.status(500).json({ message: error.message });
   }
 };
-
 // @desc    Assign partner to order
 // @route   PUT /api/orders/:id/assign
 // @access  Private/Admin
