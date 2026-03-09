@@ -4,7 +4,7 @@ import {
   fetchMarketplaceOrders,
   fetchMyOrders,
   assignOrder,
-  updateOrderStatus, // Added missing import
+  updateOrderStatus,
 } from "../../features/delivery/DeliverySlice";
 import { 
   Package, MapPin, ArrowRight, Zap, 
@@ -22,6 +22,7 @@ const DeliveryDashboard = () => {
   );
   const { userInfo } = useSelector((state) => state.auth);
 
+  // Stats Logic
   const completedToday = myOrders.filter(o => o.orderStatus === 'delivered').length;
   const earningsToday = myOrders
     .filter(o => o.orderStatus === 'delivered')
@@ -34,25 +35,24 @@ const DeliveryDashboard = () => {
     }
   }, [dispatch, isOnline]);
 
+  // HANDLE CLAIM ORDER (Optimized)
   const handleAccept = async (orderId) => {
+    const loadingToast = toast.loading("Claiming order...");
     const result = await dispatch(assignOrder({ orderId, partnerId: userInfo._id }));
+    
     if (!result.error) {
-      toast.success("Order Claimed Successfully!");
+      toast.success("Order Claimed!", { id: loadingToast });
+      // Background refresh to sync lists without page reload
+      dispatch(fetchMarketplaceOrders());
+      dispatch(fetchMyOrders());
       setSubTab("tasks");
+    } else {
+      toast.error("Failed to claim order", { id: loadingToast });
     }
   };
 
-  const getImageUrl = (item) => {
-    const path = item.product?.image || item.image;
-    if (!path) return "https://placehold.co/150?text=No+Image";
-    return path.startsWith("http") 
-      ? path 
-      : `${import.meta.env.VITE_API_BASE_URL}${path}`;
-  };
-
-  // Logic to advance the order status
+  // HANDLE STATUS UPDATE (Optimized)
   const handleStatusUpdate = async (orderId, currentStatus) => {
-    console.log("Hitting URL:", `${import.meta.env.VITE_API_BASE_URL}/api/orders/${orderId}/status`);
     const statusFlow = {
       'placed': 'picked up',
       'processing': 'picked up',
@@ -63,14 +63,25 @@ const DeliveryDashboard = () => {
     const nextStatus = statusFlow[currentStatus];
 
     if (nextStatus) {
+      const loadingToast = toast.loading(`Updating to ${nextStatus}...`);
       const result = await dispatch(updateOrderStatus({ orderId, status: nextStatus }));
+      
       if (!result.error) {
-        toast.success(`Order ${nextStatus.toUpperCase()}!`);
-        if (nextStatus === 'delivered') {
-          dispatch(fetchMyOrders());
-        }
+        toast.success(`Status: ${nextStatus.toUpperCase()}`, { id: loadingToast });
+        // Refresh local data from server to update UI state
+        dispatch(fetchMyOrders());
+      } else {
+        toast.error("Update failed", { id: loadingToast });
       }
     }
+  };
+
+  const getImageUrl = (item) => {
+    const path = item.product?.image || item.image;
+    if (!path) return "https://placehold.co/150?text=No+Image";
+    return path.startsWith("http") 
+      ? path 
+      : `${import.meta.env.VITE_API_BASE_URL}${path}`;
   };
 
   return (
@@ -128,7 +139,7 @@ const DeliveryDashboard = () => {
                 <p className="font-mono font-bold text-slate-400 text-xs">#{order._id.slice(-6).toUpperCase()}</p>
               </div>
 
-              {/* PRODUCT MANIFEST SECTION */}
+              {/* PRODUCT MANIFEST */}
               <div className="flex-1 mb-6">
                 <div className="flex items-center gap-2 mb-3 text-slate-400">
                   <ShoppingBag size={12} />
@@ -145,7 +156,7 @@ const DeliveryDashboard = () => {
                       />
                       <div className="flex-1 overflow-hidden">
                         <p className="text-[11px] font-bold text-slate-800 truncate">
-                          {item.product?.name || item.name || "Loading..."}
+                          {item.product?.name || item.name || "Item"}
                         </p>
                         <div className="flex justify-between items-center">
                           <p className="text-[9px] font-black text-emerald-600 uppercase">Qty: {item.quantity}</p>
@@ -157,7 +168,7 @@ const DeliveryDashboard = () => {
                 </div>
               </div>
 
-              {/* FULL ADDRESS SECTION */}
+              {/* DESTINATION */}
               <div className="mb-6 bg-slate-50/50 p-4 rounded-3xl border border-slate-100">
                 <div className="flex items-center gap-2 mb-2">
                   <MapPin size={14} className="text-emerald-500" />
@@ -174,14 +185,14 @@ const DeliveryDashboard = () => {
                 </div>
               </div>
 
-              {/* TOTAL PRICE BLOCK */}
+              {/* TOTAL & PAYMENT */}
               <div className="flex items-center justify-between mb-6 px-2">
                 <div>
                   <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Payment</p>
                   <p className="text-[10px] font-bold text-slate-900 uppercase italic">{order.paymentMethod || 'Prepaid'}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Collect Amount</p>
+                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Collect</p>
                   <p className="text-xl font-black text-emerald-600 flex items-center justify-end">
                     <IndianRupee size={16} strokeWidth={3} />
                     {order.totalAmount?.toFixed(2)}
@@ -193,42 +204,41 @@ const DeliveryDashboard = () => {
               {subTab === "marketplace" ? (
                 <button 
                   onClick={() => handleAccept(order._id)} 
-                  className="w-full bg-slate-900 text-white py-4 rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] flex items-center justify-center gap-2 hover:bg-emerald-600 transition-all shadow-lg shadow-slate-200"
+                  className="w-full bg-slate-900 text-white py-4 rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] flex items-center justify-center gap-2 hover:bg-emerald-600 transition-all"
                 >
                   Claim Order <ArrowRight size={14} />
                 </button>
               ) : (
                 <div className="flex flex-col gap-2">
-                   <div className="flex gap-2">
-                      <a href={`tel:${order.shippingAddress?.phone}`} className="p-4 bg-slate-100 text-slate-900 rounded-2xl hover:bg-emerald-500 hover:text-white transition-all">
-                        <Phone size={16} />
-                      </a>
-                      <button 
-                        onClick={() => window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${order.shippingAddress?.street}, ${order.shippingAddress?.city}, ${order.shippingAddress?.pincode}`)}`)}
-                        className="flex-1 bg-slate-100 text-slate-900 rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 hover:bg-slate-200"
-                      >
-                        <Navigation size={14} /> Navigate
-                      </button>
-                   </div>
-                   
-                   {/* DYNAMIC PROGRESS BUTTON */}
-                   <button 
-                     onClick={() => handleStatusUpdate(order._id, order.orderStatus)}
-                     disabled={order.orderStatus === 'delivered'}
-                     className={`w-full py-4 rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] transition-all shadow-md ${
-                       order.orderStatus === 'delivered' 
-                       ? 'bg-emerald-100 text-emerald-600 cursor-default' 
-                       : 'bg-emerald-600 text-white hover:bg-slate-900'
-                     }`}
-                   >
-                     {order.orderStatus === 'placed' || order.orderStatus === 'processing' 
-                       ? "Confirm Pickup" 
-                       : order.orderStatus === 'picked up' 
-                       ? "Start Delivery" 
-                       : order.orderStatus === 'out for delivery' 
-                       ? "Mark as Delivered" 
-                       : "Order Completed"}
-                   </button>
+                  <div className="flex gap-2">
+                    <a href={`tel:${order.shippingAddress?.phone}`} className="p-4 bg-slate-100 text-slate-900 rounded-2xl hover:bg-emerald-500 hover:text-white transition-all">
+                      <Phone size={16} />
+                    </a>
+                    <button 
+                      onClick={() => window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${order.shippingAddress?.street}, ${order.shippingAddress?.city}, ${order.shippingAddress?.pincode}`)}`)}
+                      className="flex-1 bg-slate-100 text-slate-900 rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 hover:bg-slate-200"
+                    >
+                      <Navigation size={14} /> Navigate
+                    </button>
+                  </div>
+                  
+                  <button 
+                    onClick={() => handleStatusUpdate(order._id, order.orderStatus)}
+                    disabled={order.orderStatus === 'delivered'}
+                    className={`w-full py-4 rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] transition-all ${
+                      order.orderStatus === 'delivered' 
+                      ? 'bg-emerald-100 text-emerald-600 cursor-default' 
+                      : 'bg-emerald-600 text-white hover:bg-slate-900'
+                    }`}
+                  >
+                    {order.orderStatus === 'placed' || order.orderStatus === 'processing' 
+                      ? "Confirm Pickup" 
+                      : order.orderStatus === 'picked up' 
+                      ? "Start Delivery" 
+                      : order.orderStatus === 'out for delivery' 
+                      ? "Mark as Delivered" 
+                      : "Order Completed"}
+                  </button>
                 </div>
               )}
             </div>

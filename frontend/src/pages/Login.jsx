@@ -25,7 +25,7 @@ useEffect(() => {
     if (userInfo.role === 'delivery') {
       navigate('/delivery/dashboard');
     } else if (userInfo.role === 'admin') {
-      navigate('/admin/dashboard');
+      navigate('/admin');
     } else {
       navigate('/home');
     }
