@@ -1,5 +1,7 @@
 const User = require("../models/User");
 const jwt = require("jsonwebtoken");
+// OR, if you are using 'require' syntax:
+const bcrypt = require("bcryptjs");
 
 // Generate JWT
 const generateToken = (id) => {
@@ -164,6 +166,28 @@ const updateUserProfile = async (req, res) => {
   }
 };
 
+// @desc    Direct Password Reset
+// @route   POST /api/auth/reset-password-direct
+ const resetPasswordDirect = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // ✅ FIX: Just assign the plain text password. 
+    // The userSchema.pre("save") in your model will hash it automatically.
+    user.password = password; 
+
+    await user.save();
+    res.status(200).json({ message: "Password updated successfully" });
+  } catch (error) {
+    console.error("Reset Password Error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
 // ✅ EXPORT EVERYTHING ONCE
 module.exports = {
   registerUser,
@@ -171,4 +195,5 @@ module.exports = {
   getMe,
    getUserProfile, 
    updateUserProfile ,
+   resetPasswordDirect
 };

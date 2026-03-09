@@ -68,21 +68,28 @@ return rejectWithValue(error.response?.data?.message || error.message);
 
 /* RIDER: Update own availability */
 export const updateAvailability = createAsyncThunk(
-'delivery/updateAvailability',
-async ({ isAvailable }, { getState, rejectWithValue }) => {
-try {
-const { data } = await axios.put(
-`${BASE_URL}/availability`,
-{ isAvailable },
-getAuthConfig(getState)
-);
-return data;
-} catch (error) {
-return rejectWithValue(error.response?.data?.message || error.message);
-}
-}
-);
+  'delivery/updateAvailability',
+  async ({ isAvailable }, { getState, rejectWithValue }) => {
+    try {
+      const { auth: { userInfo } } = getState();
+      
+      const { data } = await axios.put(
+        `${BASE_URL}/availability`,
+        { isAvailable },
+        getAuthConfig(getState)
+      );
 
+      // --- PERSISTENCE FIX ---
+      // Update localStorage so the status survives a refresh
+      const updatedUser = { ...userInfo, isAvailable: data.isAvailable };
+      localStorage.setItem("userInfo", JSON.stringify(updatedUser));
+
+      return data; // returns { isAvailable: true/false }
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || error.message);
+    }
+  }
+);
 /* RIDER: Fetch marketplace orders */
 export const fetchMarketplaceOrders = createAsyncThunk(
 'delivery/fetchMarketplaceOrders',
@@ -150,18 +157,24 @@ return rejectWithValue(error.response?.data?.message || error.message);
 );
 
 
-/* RIDER: Update profile details (Contact & Vehicle) */
 export const updateProfile = createAsyncThunk(
   'delivery/updateProfile',
   async (profileData, { getState, rejectWithValue }) => {
     try {
-      // profileData will be { phone: '...', vehicleNumber: '...' }
+      // 1. Get current state to preserve the token
+      const { auth: { userInfo } } = getState();
+      
       const { data } = await axios.put(
-        `${BASE_URL}/profile`, // Ensure your backend has this route
+        `${BASE_URL}/profile`, 
         profileData,
         getAuthConfig(getState)
       );
-      return data;
+
+      // 2. CRITICAL: Update localStorage with the NEW data from backend
+      // 'data' here is the object your controller just sent back
+      localStorage.setItem("userInfo", JSON.stringify(data));
+
+      return data; 
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || error.message);
     }
@@ -220,10 +233,13 @@ builder
 
   /* RIDER AVAILABILITY */
 
-  .addCase(updateAvailability.fulfilled, (state) => {
-    state.loading = false;
-    state.success = true;
-  })
+  // Inside extraReducers in AuthSlice.js
+.addCase("delivery/updateAvailability/fulfilled", (state, action) => {
+  if (state.userInfo) {
+    // Update the live userInfo state with the new availability
+    state.userInfo.isAvailable = action.payload.isAvailable;
+  }
+})
 
   /* MARKETPLACE ORDERS */
 

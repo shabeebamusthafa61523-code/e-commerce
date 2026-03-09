@@ -5,22 +5,26 @@ import {
   fetchMyOrders,
   assignOrder,
   updateOrderStatus,
+  updateAvailability // Now properly linked to persistence
 } from "../../features/delivery/DeliverySlice";
 import { 
   Package, MapPin, ArrowRight, Zap, 
-  Loader2, ShoppingBag, Bell, FaRupeeSign, CheckCircle, Navigation, Phone, IndianRupee
+  Loader2, ShoppingBag, Bell, CheckCircle, Navigation, Phone, IndianRupee
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 
 const DeliveryDashboard = () => {
   const dispatch = useDispatch();
   const [subTab, setSubTab] = useState("marketplace");
-  const [isOnline, setIsOnline] = useState(true);
-
+  
+  // 1. Get user and delivery data from Redux
   const { marketplaceOrders = [], myOrders = [], loading } = useSelector(
     (state) => state.delivery
   );
   const { userInfo } = useSelector((state) => state.auth);
+
+  // 2. Initialize isOnline from the persisted userInfo
+  const [isOnline, setIsOnline] = useState(userInfo?.isAvailable || false);
 
   // Stats Logic
   const completedToday = myOrders.filter(o => o.orderStatus === 'delivered').length;
@@ -28,6 +32,7 @@ const DeliveryDashboard = () => {
     .filter(o => o.orderStatus === 'delivered')
     .reduce((acc, curr) => acc + (curr.totalAmount * 0.1), 0);
 
+  // 3. Sync Data on Load or Online Status Change
   useEffect(() => {
     if (isOnline) {
       dispatch(fetchMarketplaceOrders());
@@ -35,14 +40,33 @@ const DeliveryDashboard = () => {
     }
   }, [dispatch, isOnline]);
 
-  // HANDLE CLAIM ORDER (Optimized)
+  // HANDLE AVAILABILITY TOGGLE (Syncs with Backend & LocalStorage)
+  const handleToggleAvailability = async () => {
+    const newStatus = !isOnline;
+    
+    // Optimistic UI update
+    setIsOnline(newStatus);
+    
+    const loadingToast = toast.loading(`Switching to ${newStatus ? 'Online' : 'Offline'}...`);
+    
+    const result = await dispatch(updateAvailability({ isAvailable: newStatus }));
+
+    if (result.error) {
+      // Revert UI if server update fails
+      setIsOnline(!newStatus);
+      toast.error("Status update failed", { id: loadingToast });
+    } else {
+      toast.success(newStatus ? "You are now ONLINE" : "You are now OFFLINE", { id: loadingToast });
+    }
+  };
+
+  // HANDLE CLAIM ORDER
   const handleAccept = async (orderId) => {
     const loadingToast = toast.loading("Claiming order...");
     const result = await dispatch(assignOrder({ orderId, partnerId: userInfo._id }));
     
     if (!result.error) {
       toast.success("Order Claimed!", { id: loadingToast });
-      // Background refresh to sync lists without page reload
       dispatch(fetchMarketplaceOrders());
       dispatch(fetchMyOrders());
       setSubTab("tasks");
@@ -51,7 +75,7 @@ const DeliveryDashboard = () => {
     }
   };
 
-  // HANDLE STATUS UPDATE (Optimized)
+  // HANDLE STATUS UPDATE
   const handleStatusUpdate = async (orderId, currentStatus) => {
     const statusFlow = {
       'placed': 'picked up',
@@ -68,7 +92,6 @@ const DeliveryDashboard = () => {
       
       if (!result.error) {
         toast.success(`Status: ${nextStatus.toUpperCase()}`, { id: loadingToast });
-        // Refresh local data from server to update UI state
         dispatch(fetchMyOrders());
       } else {
         toast.error("Update failed", { id: loadingToast });
@@ -86,30 +109,41 @@ const DeliveryDashboard = () => {
 
   return (
     <div className="p-6 md:p-10 min-h-screen bg-slate-50 font-sans text-slate-900">
+      
       {/* 1. STATS SECTION */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
         <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm flex items-center gap-4">
-          <div className="size-12 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-600"><IndianRupee size={20} /></div>
+          <div className="size-12 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-600">
+            <IndianRupee size={20} />
+          </div>
           <div>
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Today's Earnings</p>
             <p className="text-xl font-black text-slate-900">₹{earningsToday.toFixed(2)}</p>
           </div>
         </div>
+
         <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm flex items-center gap-4">
-          <div className="size-12 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600"><CheckCircle size={20} /></div>
+          <div className="size-12 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600">
+            <CheckCircle size={20} />
+          </div>
           <div>
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Completed</p>
             <p className="text-xl font-black text-slate-900">{completedToday} Drops</p>
           </div>
         </div>
-        <div className={`p-6 rounded-[2rem] border transition-all flex items-center justify-between ${isOnline ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+
+        {/* PERSISTED ONLINE TOGGLE */}
+        <div className={`p-6 rounded-[2rem] border transition-all flex items-center justify-between ${isOnline ? 'bg-slate-900 border-slate-800 shadow-lg shadow-emerald-500/10' : 'bg-white border-slate-200'}`}>
           <div className="flex items-center gap-3">
-            <div className={`size-3 rounded-full ${isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`} />
+            <div className={`size-3 rounded-full ${isOnline ? 'bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]' : 'bg-slate-300'}`} />
             <span className={`text-[10px] font-black uppercase tracking-widest ${isOnline ? 'text-white' : 'text-slate-400'}`}>
               {isOnline ? 'System Online' : 'System Offline'}
             </span>
           </div>
-          <button onClick={() => setIsOnline(!isOnline)} className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase transition-all ${isOnline ? 'bg-red-500/10 text-red-400' : 'bg-emerald-500 text-white'}`}>
+          <button 
+            onClick={handleToggleAvailability} 
+            className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase transition-all ${isOnline ? 'bg-red-500/20 text-red-400 hover:bg-red-500 hover:text-white' : 'bg-emerald-500 text-white hover:bg-emerald-600'}`}
+          >
             {isOnline ? 'Go Offline' : 'Go Online'}
           </button>
         </div>
@@ -130,10 +164,10 @@ const DeliveryDashboard = () => {
       ) : (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
           {(subTab === "marketplace" ? marketplaceOrders : myOrders).map((order) => (
-            <div key={order._id} className="bg-white p-6 rounded-[40px] shadow-sm border border-slate-100 hover:shadow-xl transition-all flex flex-col h-full">
+            <div key={order._id} className="bg-white p-6 rounded-[40px] shadow-sm border border-slate-100 hover:shadow-xl transition-all flex flex-col h-full group">
               
               <div className="flex justify-between items-start mb-4">
-                <span className="text-[9px] font-black bg-slate-100 text-slate-500 px-3 py-1 rounded-full uppercase italic">
+                <span className={`text-[9px] font-black px-3 py-1 rounded-full uppercase italic ${order.orderStatus === 'delivered' ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-500'}`}>
                   {order.orderStatus}
                 </span>
                 <p className="font-mono font-bold text-slate-400 text-xs">#{order._id.slice(-6).toUpperCase()}</p>
@@ -169,7 +203,7 @@ const DeliveryDashboard = () => {
               </div>
 
               {/* DESTINATION */}
-              <div className="mb-6 bg-slate-50/50 p-4 rounded-3xl border border-slate-100">
+              <div className="mb-6 bg-slate-50/50 p-4 rounded-3xl border border-slate-100 group-hover:bg-emerald-50/30 transition-colors">
                 <div className="flex items-center gap-2 mb-2">
                   <MapPin size={14} className="text-emerald-500" />
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Destination</p>
@@ -243,6 +277,11 @@ const DeliveryDashboard = () => {
               )}
             </div>
           ))}
+        </div>
+      )}
+      {!loading && (subTab === "marketplace" ? marketplaceOrders : myOrders).length === 0 && (
+        <div className="text-center py-20 opacity-30 grayscale italic">
+          <p className="font-black text-2xl uppercase tracking-tighter">No active data in terminal.</p>
         </div>
       )}
     </div>
