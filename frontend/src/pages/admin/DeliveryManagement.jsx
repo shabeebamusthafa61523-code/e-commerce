@@ -77,8 +77,10 @@ const DeliveryManagement = () => {
   ) || [];
 
   // Logic: Show ONLY online partners in the dispatch dropdown
-  const onlinePartners = partners.filter(p => p.isOnline);
+const onlinePartners = partners.filter(p => p.isAvailable);
 
+// Filter for partners who are Online AND not currently busy
+const availablePartners = partners.filter(p => p.isAvailable && p.currentStatus !== 'busy');
   return (
     <div className="flex min-h-screen bg-slate-50 font-sans">
       <AdminSidebar />
@@ -222,12 +224,15 @@ const DeliveryManagement = () => {
                                     <span className="text-[8px] font-black text-slate-400 tracking-widest">
                                       PIN: {order.shippingAddress?.pincode}
                                     </span>
-                                    <button 
-                                      onClick={() => window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${order.shippingAddress?.street}, ${order.shippingAddress?.city}, ${order.shippingAddress?.pincode}`)}`)}
-                                      className="flex items-center gap-1 text-[8px] font-black uppercase text-blue-600 hover:text-blue-800 transition-colors"
-                                    >
-                                      Track <FaExternalLinkAlt size={7} />
-                                    </button>
+                                   <button 
+  onClick={() => {
+    const address = `${order.shippingAddress?.street}, ${order.shippingAddress?.city}, ${order.shippingAddress?.pincode}`;
+    window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`, '_blank');
+  }}
+  className="flex items-center gap-1 text-[8px] font-black uppercase text-blue-600 hover:text-blue-800 transition-colors"
+>
+  Track <FaExternalLinkAlt size={7} />
+</button>
                                  </div>
                                </div>
                             </div>
