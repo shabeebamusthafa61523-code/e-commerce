@@ -87,41 +87,63 @@ shippingAddress: address,
   };
 
   const handleRazorpayPayment = async (address) => {
-    try {
-      setLoading(true);
-      const userInfo = JSON.parse(localStorage.getItem("userInfo"));
-      const { data } = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/payment/create-order`, 
-        { items: cart.map(i => ({ product: i._id, quantity: i.quantity })) },
-        { headers: { Authorization: `Bearer ${userInfo?.token}` } }
-      );
-
-      const options = {
-        key: import.meta.env.VITE_RAZORPAY_KEY_ID,
-        amount: data.amount,
-        currency: "INR",
-        order_id: data.id,
-        name: "Pacha.Cart",
-       handler: async (res) => {
   try {
-    await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/orders`, { // Added /api/orders
-      ...res, 
-shippingAddress: address,
-      paymentMethod: "Razorpay",
-      totalAmount: total,
-      items: cart.map(i => ({ product: i._id, quantity: i.quantity }))
-    }, { headers: { Authorization: `Bearer ${userInfo?.token}` } });
-    finishOrder();
-  } catch (error) {
-    alert("Payment verification failed on server");
-  }
-},
-        theme: { color: "#10b981" }
-      };
-      new window.Razorpay(options).open();
-    } catch (e) { alert("Payment Initiation Failed"); }
-    finally { setLoading(false); }
-  };
+    setLoading(true);
+    const userInfo = JSON.parse(localStorage.getItem("userInfo"));
+    
+    // 1. Create the Razorpay Order via your existing backend
+    const { data } = await axios.post(
+      `${import.meta.env.VITE_API_BASE_URL}/api/payment/create-order`, 
+      { items: cart.map(i => ({ product: i._id, quantity: i.quantity })) },
+      { headers: { Authorization: `Bearer ${userInfo?.token}` } }
+    );
 
+    const options = {
+      key: import.meta.env.VITE_RAZORPAY_KEY_ID,
+      amount: data.amount,
+      currency: "INR",
+      order_id: data.id,
+      name: "Pacha.Cart",
+      handler: async (res) => {
+        try {
+          // 2. Call your existing verifyPayment
+          // This creates a NEW order in your DB and returns it as { order: { _id: "..." } }
+          const { data: verifyData } = await axios.post(
+            `${import.meta.env.VITE_API_BASE_URL}/api/payment/verify`, 
+            {
+              ...res, 
+              address: address, // Matches your backend's expected 'address' key
+              items: cart.map(i => ({ product: i._id, quantity: i.quantity }))
+            }, 
+            { headers: { Authorization: `Bearer ${userInfo?.token}` } }
+          );
+
+          if (verifyData.success) {
+            // 3. THE FIX: Clear cart and show success
+            clearCart();
+            setShowSuccessModal(true);
+            
+            // 4. NAVIGATE TO THE NEW ORDER ID RETURNED BY THE SERVER
+            // verifyData.order._id is the "Paid" order created by your backend
+            setTimeout(() => navigate(`/order/${verifyData.order._id}`), 3000);
+          }
+        } catch (error) {
+          alert("Payment verification failed on server");
+        }
+      },
+      prefill: {
+        name: address.fullName,
+        contact: address.phone,
+      },
+      theme: { color: "#10b981" }
+    };
+    new window.Razorpay(options).open();
+  } catch (e) { 
+    alert("Payment Initiation Failed"); 
+  } finally { 
+    setLoading(false); 
+  }
+};
   const finishOrder = () => {
     clearCart();
     setShowSuccessModal(true);

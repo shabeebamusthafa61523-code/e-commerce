@@ -46,6 +46,7 @@ const ProductDetails = () => {
           
           {/* Image Section */}
           {/* Image Section */}
+{/* Image Section */}
 <div className="relative group overflow-hidden rounded-[2.5rem] bg-slate-50 p-8">
   {isSale && (
     <div className="absolute top-6 left-6 z-10 bg-red-600 text-white px-4 py-2 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center gap-2 shadow-lg shadow-red-200">
@@ -54,13 +55,17 @@ const ProductDetails = () => {
   )}
   <img
     src={
-      product.image?.startsWith("http") 
-        ? product.image // If it's Cloudinary, use it directly
-        : `${import.meta.env.VITE_API_BASE_URL}${product.image}` // Fallback for old local images
+      // Check for 'images' array first (Common Cloudinary pattern)
+      product.images && product.images.length > 0 
+        ? product.images[0] 
+        : product.image // Fallback to single 'image' field
     }
     alt={product.name}
-    className="w-full max-h-[500px] object-contain transition-transform duration-700 group-hover:scale-110"
-    onError={(e) => { e.target.src = "/placeholder.png"; }} // Fallback if link is broken
+    className="w-full max-h-[500px] object-contain  transition-transform duration-700 group-hover:scale-110"
+    onError={(e) => { 
+      // If Cloudinary fails, show a placeholder
+      e.target.src = "/placeholder.png"; 
+    }}
   />
 </div>
 

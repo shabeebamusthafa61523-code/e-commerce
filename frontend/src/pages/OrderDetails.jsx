@@ -3,15 +3,15 @@ import axios from "axios";
 import { useParams, useNavigate } from "react-router-dom";
 import { 
   FaCheck, 
-  FaLeaf, 
   FaTimes, 
   FaPrint, 
   FaArrowLeft, 
   FaPhoneAlt, 
-  FaMapMarkerAlt 
+  FaMapMarkerAlt,
+  FaCreditCard,
+  FaClock
 } from "react-icons/fa";
 import logo from "../assets/logo.png";
-
 
 export default function OrderDetails() {
   const { id } = useParams();
@@ -20,7 +20,6 @@ export default function OrderDetails() {
   const [loading, setLoading] = useState(true);
   const [showInvoice, setShowInvoice] = useState(false);
 
-  // Matches the exact enums in your Mongoose Schema
   const statusSteps = [
     "processing", 
     "assigned", 
@@ -29,31 +28,20 @@ export default function OrderDetails() {
     "delivered"
   ];
 
- const fetchOrder = async () => {
-  try {
-    const userInfo = JSON.parse(localStorage.getItem("userInfo"));
-    const { data } = await axios.get(
-      `${import.meta.env.VITE_API_BASE_URL}/api/orders/${id}`,
-      { headers: { Authorization: `Bearer ${userInfo?.token}` } }
-    );
-
-    // --- DEBUG LOGS ---
-    console.log("1. Raw Data from API:", data);
-    console.log("2. Keys available in data:", Object.keys(data));
-    if (data.shippingAddress) {
-      console.log("3. shippingAddress found:", data.shippingAddress);
-    } else {
-      console.warn("3. shippingAddress is MISSING from the API response");
+  const fetchOrder = async () => {
+    try {
+      const userInfo = JSON.parse(localStorage.getItem("userInfo"));
+      const { data } = await axios.get(
+        `${import.meta.env.VITE_API_BASE_URL}/api/orders/${id}`,
+        { headers: { Authorization: `Bearer ${userInfo?.token}` } }
+      );
+      setOrder(data);
+    } catch (error) {
+      console.error("Failed to fetch order:", error);
+    } finally {
+      setLoading(false);
     }
-    // ------------------
-
-    setOrder(data);
-  } catch (error) {
-    console.error("Failed to fetch order:", error);
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   useEffect(() => {
     fetchOrder();
@@ -73,7 +61,7 @@ export default function OrderDetails() {
   );
 
   const currentStep = statusSteps.indexOf(order.orderStatus);
-console.log("Full Address Object:", order.shippingAddress);
+
   return (
     <div className="min-h-screen bg-slate-50 py-24 px-6 font-sans">
       <div className="max-w-5xl mx-auto space-y-8">
@@ -136,45 +124,48 @@ console.log("Full Address Object:", order.shippingAddress);
 
         {/* --- DETAILS GRID --- */}
         <div className="grid md:grid-cols-2 gap-8">
-          {/* Mapping to street and pincode as per Schema */}
-          {/* --- UPDATED ADDRESS SECTION --- */}
-<div className="bg-white p-8 rounded-[3rem] shadow-sm border border-slate-100">
-  <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
-    <FaMapMarkerAlt className="text-emerald-500" /> Delivery Address
-  </h2>
-  
-  {order.shippingAddress?.fullName ? (
-    <div className="space-y-1">
-      <p className="text-xl font-black text-slate-900 mb-2">
-        {order.shippingAddress.fullName}
-      </p>
-      <div className="text-slate-500 font-medium leading-relaxed">
-        <p className="text-slate-800 font-bold">{order.shippingAddress.street}</p>
-        <p>{order.shippingAddress.city}, {order.shippingAddress.pincode}</p>
-        
-        <div className="mt-4 pt-4 border-t border-slate-50 flex items-center gap-2 text-slate-900 font-bold">
-          <FaPhoneAlt className="text-emerald-500 size-3" /> 
-          {order.shippingAddress.phone}
-        </div>
-      </div>
-    </div>
-  ) : (
-    <div className="py-4 text-center">
-      <p className="text-slate-400 font-bold text-sm italic">Address details unavailable for this order</p>
-    </div>
-  )}
-</div>
+          <div className="bg-white p-8 rounded-[3rem] shadow-sm border border-slate-100">
+            <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+              <FaMapMarkerAlt className="text-emerald-500" /> Delivery Address
+            </h2>
+            {order.shippingAddress?.fullName ? (
+              <div className="space-y-1">
+                <p className="text-xl font-black text-slate-900 mb-2">{order.shippingAddress.fullName}</p>
+                <div className="text-slate-500 font-medium leading-relaxed">
+                  <p className="text-slate-800 font-bold">{order.shippingAddress.street}</p>
+                  <p>{order.shippingAddress.city}, {order.shippingAddress.pincode}</p>
+                  <div className="mt-4 pt-4 border-t border-slate-50 flex items-center gap-2 text-slate-900 font-bold">
+                    <FaPhoneAlt className="text-emerald-500 size-3" /> {order.shippingAddress.phone}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="py-4 text-center">
+                <p className="text-slate-400 font-bold text-sm italic">Address details unavailable</p>
+              </div>
+            )}
+          </div>
 
           <div className="bg-white p-8 rounded-[3rem] shadow-sm border border-slate-100">
-            <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6">💳 Billing Summary</h2>
+            <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+               <FaCreditCard className="text-emerald-500" /> Billing Summary
+            </h2>
             <div className="space-y-4">
               <div className="flex justify-between text-sm">
                 <span className="text-slate-400 font-bold uppercase tracking-widest">Method</span>
                 <span className="font-black text-slate-800 uppercase tracking-tighter">{order.paymentMethod}</span>
               </div>
-              <div className={`p-4 rounded-2xl border ${order.isPaid ? "bg-emerald-50/50 border-emerald-100 text-emerald-700" : "bg-red-50/50 border-red-100 text-red-600"} font-black text-sm text-center`}>
-                {order.isPaid ? `PAID ON ${new Date(order.paidAt).toLocaleDateString()}` : "PAYMENT PENDING"}
-              </div>
+              
+              {/* CLEAN STATUS BADGES ONLY */}
+              {order.isPaid ? (
+                <div className="p-4 rounded-2xl border bg-emerald-50/50 border-emerald-100 text-emerald-700 font-black text-sm text-center flex items-center justify-center gap-2">
+                  <FaCheck className="size-3" /> PAID ON {new Date(order.paidAt).toLocaleDateString()}
+                </div>
+              ) : (
+                <div className="p-4 rounded-2xl border bg-orange-50/50 border-orange-100 text-orange-700 font-black text-sm text-center flex items-center justify-center gap-2 uppercase tracking-widest">
+                  <FaClock className="size-3 animate-pulse" /> Payment Pending
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -209,27 +200,23 @@ console.log("Full Address Object:", order.shippingAddress);
 
       {/* --- INVOICE MODAL --- */}
       {showInvoice && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className="bg-white w-full max-w-2xl rounded-[3rem] shadow-2xl overflow-hidden relative animate-in zoom-in-95 duration-300">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="bg-white w-full max-w-2xl rounded-[3rem] shadow-2xl overflow-hidden relative">
             <div className="absolute top-6 right-8 flex gap-3 print:hidden">
               <button onClick={() => window.print()} className="p-3 bg-slate-100 hover:bg-emerald-100 text-slate-600 rounded-full transition-colors"><FaPrint size={14}/></button>
               <button onClick={() => setShowInvoice(false)} className="p-3 bg-slate-100 hover:bg-red-100 text-slate-600 rounded-full transition-colors"><FaTimes size={14}/></button>
             </div>
             <div className="p-12">
-             <div className="flex justify-between items-start mb-10">
-          <div>
-            <img 
-              src={logo} 
-              alt="Pacha.Cart Logo" 
-              className="h-25 w-auto mb-2 object-contain"
-            />
-            <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Official Tax Invoice</p>
-          </div>
-          <div className="text-right">
-            <p className="text-xs font-black text-slate-900 uppercase tracking-tighter">Order #{order._id.slice(-6).toUpperCase()}</p>
-            <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">{order.paymentMethod}</p>
-          </div>
-        </div>
+              <div className="flex justify-between items-start mb-10">
+                <div>
+                  <img src={logo} alt="Pacha.Cart" className="h-20 w-auto mb-2 object-contain" />
+                  <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Official Tax Invoice</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs font-black text-slate-900 uppercase tracking-tighter">Order #{order._id.slice(-6).toUpperCase()}</p>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">{order.paymentMethod}</p>
+                </div>
+              </div>
               <table className="w-full mb-8 text-xs">
                 <thead className="text-slate-400 uppercase font-black border-b border-slate-50"><tr className="text-left"><th className="pb-3">Product</th><th className="pb-3 text-center">Qty</th><th className="pb-3 text-right">Total</th></tr></thead>
                 <tbody className="divide-y divide-slate-50">
@@ -239,7 +226,6 @@ console.log("Full Address Object:", order.shippingAddress);
                 </tbody>
               </table>
               <div className="bg-slate-50 p-6 rounded-2xl flex justify-between items-center"><p className="text-[10px] font-black text-slate-400 uppercase">Grand Total</p><p className="text-2xl font-black text-slate-900">₹{order.totalAmount.toFixed(2)}</p></div>
-              <p className="text-center text-[8px] font-black text-slate-300 uppercase tracking-[0.4em] mt-10">Premium Automated Groceries</p>
             </div>
           </div>
         </div>
